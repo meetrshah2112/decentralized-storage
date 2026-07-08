@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Provider Dashboard{% endblock %}
+
+{% block content %}
+
+<h2 class="mb-4">
+    Provider Dashboard
+</h2>
+
+{% if node %}
+
+<div class="card shadow">
+
+    <div class="card-body">
+
+        <h4>{{ node.display_name }}</h4>
+
+        <hr>
+
+        <table class="table">
+
+            <tr>
+                <th>Node UUID</th>
+                <td>{{ node.node_uuid }}</td>
+            </tr>
+
+            <tr>
+                <th>Status</th>
+                <td>{{ node.get_status_display }}</td>
+            </tr>
+
+            <tr>
+                <th>Allocated Storage</th>
+                <td>{{ node.allocated_storage }}</td>
+            </tr>
+
+            <tr>
+                <th>Storage Used</th>
+                <td>{{ node.storage_used }}</td>
+            </tr>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% else %}
+
+<a
+    href="{% url 'register_storage_node' %}"
+    class="btn btn-success">
+
+    Register Storage Node
+
+</a>
+
+{% endif %}
+
+{% endblock %}

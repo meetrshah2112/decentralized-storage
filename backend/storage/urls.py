@@ -16,4 +16,9 @@ urlpatterns = [
         views.provider_dashboard,
         name="provider_dashboard",
     ),
+    path(
+        "provider/register-node/",
+        views.register_storage_node,
+        name="register_storage_node",
+    ),
 ]

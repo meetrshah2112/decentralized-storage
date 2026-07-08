@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
+from .models import StorageNode
 
 
 class RegistrationForm(UserCreationForm):
@@ -55,3 +56,40 @@ class RegistrationForm(UserCreationForm):
             user.save()
 
         return user
+
+
+class StorageNodeForm(forms.ModelForm):
+
+    allocated_storage = forms.IntegerField(
+        min_value=1,
+        label="Storage to Contribute (GB)",
+    )
+
+    class Meta:
+        model = StorageNode
+
+        fields = [
+            "display_name",
+            "allocated_storage",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        placeholders = {
+            "display_name": "e.g. Meet's Laptop",
+            "allocated_storage": "e.g. 100",
+        }
+
+        for name, field in self.fields.items():
+            field.widget.attrs.update(
+                {
+                    "class": "form-control",
+                    "placeholder": placeholders.get(name, ""),
+                }
+            )
+
+    def clean_allocated_storage(self):
+        gb = self.cleaned_data["allocated_storage"]
+
+        return gb * 1024 * 1024 * 1024
