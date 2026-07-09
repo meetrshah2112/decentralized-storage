@@ -21,4 +21,9 @@ urlpatterns = [
         views.register_storage_node,
         name="register_storage_node",
     ),
+    path(
+        "api/heartbeat/",
+        views.heartbeat,
+        name="heartbeat",
+    ),
 ]

@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 import uuid
+from datetime import timedelta
 
 
 class UserProfile(models.Model):
@@ -72,6 +74,31 @@ class StorageNode(models.Model):
         default=0,
     )
 
+    last_heartbeat = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    is_online = models.BooleanField(
+        default=False,
+    )
+
+    available_storage = models.BigIntegerField(default=0)
+
+    total_storage = models.BigIntegerField(default=0)
+
+    operating_system = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    agent_version = models.CharField(
+        max_length=20,
+        default="0.1.0",
+    )
+
+    ipfs_status = models.BooleanField(default=False)
+
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -88,3 +115,38 @@ class StorageNode(models.Model):
 
     def __str__(self):
         return f"{self.display_name} ({self.owner.username})"
+
+    @property
+    def online(self):
+        if not self.last_heartbeat:
+            return False
+
+        return (timezone.now() - self.last_heartbeat) < timedelta(seconds=60)
+
+    @property
+    def available_storage_gb(self):
+        return round(
+            self.available_storage / (1024**3),
+            2,
+        )
+
+    @property
+    def total_storage_gb(self):
+        return round(
+            self.total_storage / (1024**3),
+            2,
+        )
+
+    @property
+    def allocated_storage_gb(self):
+        return round(
+            self.allocated_storage / (1024**3),
+            2,
+        )
+
+    @property
+    def storage_used_gb(self):
+        return round(
+            self.storage_used / (1024**3),
+            2,
+        )

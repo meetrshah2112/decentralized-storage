@@ -10,51 +10,55 @@
 
 {% if node %}
 
-<div class="card shadow">
+<div class="card mt-4">
+
+    <div class="card-header">
+        <strong>Storage Node Information</strong>
+    </div>
 
     <div class="card-body">
 
-        <h4>{{ node.display_name }}</h4>
+        <p><strong>Display Name:</strong> {{ node.display_name }}</p>
 
-        <hr>
+        <p><strong>Node UUID:</strong> {{ node.node_uuid }}</p>
 
-        <table class="table">
+        <p>
+            <strong>Status:</strong>
 
-            <tr>
-                <th>Node UUID</th>
-                <td>{{ node.node_uuid }}</td>
-            </tr>
+            {% if node.online %}
+                <span class="text-success">🟢 Online</span>
+            {% else %}
+                <span class="text-danger">🔴 Offline</span>
+            {% endif %}
+        </p>
 
-            <tr>
-                <th>Status</th>
-                <td>{{ node.get_status_display }}</td>
-            </tr>
+        <p>
+            <strong>IPFS:</strong>
 
-            <tr>
-                <th>Allocated Storage</th>
-                <td>{{ node.allocated_storage }}</td>
-            </tr>
+            {% if node.ipfs_status %}
+                <span class="text-success">🟢 Connected</span>
+            {% else %}
+                <span class="text-danger">🔴 Offline</span>
+            {% endif %}
+        </p>
 
-            <tr>
-                <th>Storage Used</th>
-                <td>{{ node.storage_used }}</td>
-            </tr>
+        <p><strong>Operating System:</strong> {{ node.operating_system }}</p>
 
-        </table>
+        <p><strong>Agent Version:</strong> {{ node.agent_version }}</p>
+
+        <p><strong>Total Storage:</strong> {{ node.total_storage_gb }} GB</p>
+
+        <p><strong>Available Storage:</strong> {{ node.available_storage_gb }} GB</p>
+
+        <p><strong>Allocated Storage:</strong> {{ node.allocated_storage_gb }} GB</p>
+
+        <p><strong>Storage Used:</strong> {{ node.storage_used_gb }} GB</p>
+
+        <p><strong>Last Heartbeat:</strong> {{ node.last_heartbeat }}</p>
 
     </div>
 
 </div>
-
-{% else %}
-
-<a
-    href="{% url 'register_storage_node' %}"
-    class="btn btn-success">
-
-    Register Storage Node
-
-</a>
 
 {% endif %}
 

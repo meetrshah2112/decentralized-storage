@@ -1,11 +1,18 @@
 from django.contrib import messages
 from django.shortcuts import render, redirect
-from .forms import RegistrationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
-from .forms import StorageNodeForm
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
+from django.utils import timezone
+from datetime import timedelta
+
+from .forms import RegistrationForm, StorageNodeForm
 from .models import StorageNode
+
+import json
 
 
 class CustomLoginView(LoginView):
@@ -55,6 +62,42 @@ def home(request):
         return redirect("provider_dashboard")
 
     return redirect("consumer_dashboard")
+
+
+@csrf_exempt
+@require_POST
+def heartbeat(request):
+
+    node_uuid = request.POST.get("node_uuid")
+
+    try:
+        node = StorageNode.objects.get(node_uuid=node_uuid)
+
+        node.last_heartbeat = timezone.now()
+        node.is_online = True
+        node.available_storage = request.POST.get("available_storage", 0)
+        node.total_storage = request.POST.get("total_storage", 0)
+        node.operating_system = request.POST.get("operating_system", "")
+        node.agent_version = request.POST.get("agent_version", "0.1.0")
+        node.ipfs_status = request.POST.get("ipfs_status") == "True"
+        node.save()
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Heartbeat received.",
+            }
+        )
+
+    except StorageNode.DoesNotExist:
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Node not found.",
+            },
+            status=404,
+        )
 
 
 @login_required

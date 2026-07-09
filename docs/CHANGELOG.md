@@ -18,15 +18,38 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## Upcoming
+## v0.2.0 - Authentication System Complete
 
-### v0.2.0
+### Added
 
-- Authentication System
+- User registration
+- User login/logout
+- Automatic UserProfile creation
+- Email uniqueness validation
+- Bootstrap-styled authentication forms
+- Consumer dashboard
+- Provider dashboard
+- Role-based login redirects
+- Home page role-based redirection
 
-### v0.3.0
+### Tested
 
-- Consumer Dashboard
+- Registration
+- Login
+- Logout
+- Consumer routing
+- Provider routing
+- Access restrictions for authenticated users
+
+## v0.3.0 - Provider Node Registration
+
+### Added
+
+- StorageNode model
+- Provider dashboard
+- Provider storage node registration
+- Role-based dashboard routing
+- Node information display
 
 ### v0.4.0
 
