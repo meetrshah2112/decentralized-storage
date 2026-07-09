@@ -1,7 +1,11 @@
 import time
-
 from heartbeat import send_heartbeat
 from config import HEARTBEAT_INTERVAL
+from ipfs_client import (
+    ipfs_available,
+    get_peer_id,
+    get_version,
+)
 
 
 def main():
@@ -11,6 +15,10 @@ def main():
     print("=" * 50)
 
     print(f"Heartbeat every {HEARTBEAT_INTERVAL} seconds")
+
+    print(f"IPFS Running : {ipfs_available()}")
+    print(f"Peer ID      : {get_peer_id()}")
+    print(f"IPFS Version : {get_version()}")
     print()
 
     while True:

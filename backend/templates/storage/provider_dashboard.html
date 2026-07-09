@@ -4,57 +4,218 @@
 
 {% block content %}
 
-<h2 class="mb-4">
-    Provider Dashboard
-</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Provider Dashboard</h2>
+        <p class="text-muted mb-0">
+            Monitor your storage node, heartbeat status, and IPFS connection.
+        </p>
+    </div>
+</div>
 
 {% if node %}
 
-<div class="card mt-4">
+<div class="row g-4">
 
-    <div class="card-header">
+    <!-- Node Status Card -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <p class="text-muted mb-1">Node Status</p>
+
+                {% if node.online %}
+                    <h4 class="text-success mb-0">🟢 Online</h4>
+                {% else %}
+                    <h4 class="text-danger mb-0">🔴 Offline</h4>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- IPFS Status Card -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <p class="text-muted mb-1">IPFS Status</p>
+
+                {% if node.ipfs_status %}
+                    <h4 class="text-success mb-0">Connected</h4>
+                {% else %}
+                    <h4 class="text-danger mb-0">Disconnected</h4>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Storage Card -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <p class="text-muted mb-1">Available Storage</p>
+                <h4 class="mb-0">{{ node.available_storage_gb }} GB</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Used Storage Card -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body">
+                <p class="text-muted mb-1">Storage Used</p>
+                <h4 class="mb-0">{{ node.storage_used_gb }} GB</h4>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Main Node Information -->
+<div class="card shadow-sm border-0 mt-4">
+
+    <div class="card-header bg-white">
         <strong>Storage Node Information</strong>
     </div>
 
     <div class="card-body">
 
-        <p><strong>Display Name:</strong> {{ node.display_name }}</p>
+        <div class="row mb-3">
+            <div class="col-md-4 text-muted">Display Name</div>
+            <div class="col-md-8">{{ node.display_name }}</div>
+        </div>
 
-        <p><strong>Node UUID:</strong> {{ node.node_uuid }}</p>
+        <div class="row mb-3">
+            <div class="col-md-4 text-muted">Node UUID</div>
+            <div class="col-md-8">
+                <code>{{ node.node_uuid }}</code>
+            </div>
+        </div>
 
-        <p>
-            <strong>Status:</strong>
+        <div class="row mb-3">
+            <div class="col-md-4 text-muted">Operating System</div>
+            <div class="col-md-8">{{ node.operating_system|default:"Not available" }}</div>
+        </div>
 
-            {% if node.online %}
-                <span class="text-success">🟢 Online</span>
-            {% else %}
-                <span class="text-danger">🔴 Offline</span>
-            {% endif %}
+        <div class="row mb-3">
+            <div class="col-md-4 text-muted">Agent Version</div>
+            <div class="col-md-8">{{ node.agent_version }}</div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-4 text-muted">Node Status</div>
+            <div class="col-md-8">
+                {% if node.online %}
+                    <span class="badge bg-success">Online</span>
+                {% else %}
+                    <span class="badge bg-danger">Offline</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 text-muted">Last Heartbeat</div>
+            <div class="col-md-8">
+                {% if node.last_heartbeat %}
+                    {{ node.last_heartbeat }}
+                {% else %}
+                    Not received yet
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Storage Statistics -->
+<div class="card shadow-sm border-0 mt-4">
+
+    <div class="card-header bg-white">
+        <strong>Storage Statistics</strong>
+    </div>
+
+    <div class="card-body">
+
+        <div class="row mb-3">
+            <div class="col-md-4 text-muted">Total Storage</div>
+            <div class="col-md-8">{{ node.total_storage_gb }} GB</div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-4 text-muted">Available Storage</div>
+            <div class="col-md-8">{{ node.available_storage_gb }} GB</div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-4 text-muted">Allocated Storage</div>
+            <div class="col-md-8">{{ node.allocated_storage_gb }} GB</div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 text-muted">Storage Used</div>
+            <div class="col-md-8">{{ node.storage_used_gb }} GB</div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- IPFS Information -->
+<div class="card shadow-sm border-0 mt-4">
+
+    <div class="card-header bg-white">
+        <strong>IPFS Node Information</strong>
+    </div>
+
+    <div class="card-body">
+
+        <div class="row mb-3">
+            <div class="col-md-4 text-muted">IPFS Status</div>
+            <div class="col-md-8">
+                {% if node.ipfs_status %}
+                    <span class="badge bg-success">Connected</span>
+                {% else %}
+                    <span class="badge bg-danger">Disconnected</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-4 text-muted">IPFS Peer ID</div>
+            <div class="col-md-8">
+                {% if node.ipfs_peer_id %}
+                    <code>{{ node.ipfs_peer_id }}</code>
+                {% else %}
+                    Not available
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 text-muted">IPFS Version</div>
+            <div class="col-md-8">
+                {{ node.ipfs_version|default:"Not available" }}
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{% else %}
+
+<div class="card shadow-sm border-0">
+
+    <div class="card-body text-center py-5">
+
+        <h4 class="mb-3">No Storage Node Registered</h4>
+
+        <p class="text-muted mb-4">
+            You have not registered a storage node yet. Register your laptop as a provider node to start contributing storage.
         </p>
 
-        <p>
-            <strong>IPFS:</strong>
-
-            {% if node.ipfs_status %}
-                <span class="text-success">🟢 Connected</span>
-            {% else %}
-                <span class="text-danger">🔴 Offline</span>
-            {% endif %}
-        </p>
-
-        <p><strong>Operating System:</strong> {{ node.operating_system }}</p>
-
-        <p><strong>Agent Version:</strong> {{ node.agent_version }}</p>
-
-        <p><strong>Total Storage:</strong> {{ node.total_storage_gb }} GB</p>
-
-        <p><strong>Available Storage:</strong> {{ node.available_storage_gb }} GB</p>
-
-        <p><strong>Allocated Storage:</strong> {{ node.allocated_storage_gb }} GB</p>
-
-        <p><strong>Storage Used:</strong> {{ node.storage_used_gb }} GB</p>
-
-        <p><strong>Last Heartbeat:</strong> {{ node.last_heartbeat }}</p>
+        <a href="{% url 'register_storage_node' %}" class="btn btn-primary">
+            Register Storage Node
+        </a>
 
     </div>
 

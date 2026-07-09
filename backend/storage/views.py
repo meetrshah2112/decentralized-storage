@@ -80,6 +80,8 @@ def heartbeat(request):
         node.operating_system = request.POST.get("operating_system", "")
         node.agent_version = request.POST.get("agent_version", "0.1.0")
         node.ipfs_status = request.POST.get("ipfs_status") == "True"
+        node.ipfs_peer_id = request.POST.get("ipfs_peer_id", "")
+        node.ipfs_version = request.POST.get("ipfs_version", "")
         node.save()
 
         return JsonResponse(

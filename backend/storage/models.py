@@ -99,6 +99,16 @@ class StorageNode(models.Model):
 
     ipfs_status = models.BooleanField(default=False)
 
+    ipfs_peer_id = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    ipfs_version = models.CharField(
+        max_length=20,
+        blank=True,
+    )
+
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
