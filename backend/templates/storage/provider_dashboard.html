@@ -62,7 +62,7 @@
         <div class="card shadow-sm border-0 h-100">
             <div class="card-body">
                 <p class="text-muted mb-1">Storage Used</p>
-                <h4 class="mb-0">{{ node.storage_used_gb }} GB</h4>
+                <h4 class="mb-0">{{ node.storage_used_display }}</h4>
             </div>
         </div>
     </div>
@@ -152,7 +152,7 @@
 
         <div class="row">
             <div class="col-md-4 text-muted">Storage Used</div>
-            <div class="col-md-8">{{ node.storage_used_gb }} GB</div>
+            <div class="col-md-8">{{ node.storage_used_display }}</div>
         </div>
 
     </div>
