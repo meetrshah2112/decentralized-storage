@@ -160,3 +160,77 @@ class StorageNode(models.Model):
             self.storage_used / (1024**3),
             2,
         )
+
+    @property
+    def storage_used_mb(self):
+        return round(
+            self.storage_used / (1024 * 1024),
+            2,
+        )
+
+    @property
+    def storage_used_display(self):
+        size = self.storage_used
+
+        if size < 1024:
+            return f"{size} B"
+
+        if size < 1024 * 1024:
+            return f"{round(size / 1024, 2)} KB"
+
+        if size < 1024 * 1024 * 1024:
+            return f"{round(size / (1024 * 1024), 2)} MB"
+
+        return f"{round(size / (1024 * 1024 * 1024), 2)} GB"
+
+
+class UploadedFile(models.Model):
+
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="uploaded_files",
+    )
+
+    provider_node = models.ForeignKey(
+        StorageNode,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="stored_files",
+    )
+
+    original_filename = models.CharField(
+        max_length=255,
+    )
+
+    cid = models.CharField(
+        max_length=255,
+    )
+
+    file_size = models.BigIntegerField(
+        default=0,
+    )
+
+    content_type = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    uploaded_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    def __str__(self):
+        return f"{self.original_filename} - {self.cid}"
+
+    @property
+    def file_size_mb(self):
+        return round(
+            self.file_size / (1024 * 1024),
+            2,
+        )
+
+    @property
+    def gateway_url(self):
+        return f"http://127.0.0.1:8080/ipfs/{self.cid}"

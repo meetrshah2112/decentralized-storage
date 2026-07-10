@@ -93,3 +93,18 @@ class StorageNodeForm(forms.ModelForm):
         gb = self.cleaned_data["allocated_storage"]
 
         return gb * 1024 * 1024 * 1024
+
+class FileUploadForm(forms.Form):
+
+    file = forms.FileField(
+        label="Select File",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields["file"].widget.attrs.update(
+            {
+                "class": "form-control",
+            }
+        )

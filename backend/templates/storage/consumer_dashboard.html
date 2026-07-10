@@ -4,8 +4,224 @@
 
 {% block content %}
 
-<h2>Consumer Dashboard</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
 
-<p>Welcome {{ user.username }}</p>
+    <div>
+        <h2 class="mb-1">Consumer Dashboard</h2>
+        <p class="text-muted mb-0">
+            Welcome {{ user.username }}. Upload files to IPFS and manage your CIDs.
+        </p>
+    </div>
+
+</div>
+
+<div class="row g-4">
+
+    <!-- Upload Card -->
+    <div class="col-lg-5">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-header bg-white">
+                <strong>Upload File to IPFS</strong>
+            </div>
+
+            <div class="card-body">
+
+                <p class="text-muted">
+                    Select a file from your computer. The file will be uploaded to IPFS and its CID will be stored in Django.
+                </p>
+
+                <form method="post" enctype="multipart/form-data">
+
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        {{ form.file.label_tag }}
+                        {{ form.file }}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        Upload to IPFS
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Summary Card -->
+    <div class="col-lg-7">
+
+        <div class="row g-4">
+
+            <div class="col-md-6">
+
+                <div class="card shadow-sm border-0">
+
+                    <div class="card-body">
+
+                        <p class="text-muted mb-1">Total Uploaded Files</p>
+
+                        <h3 class="mb-0">
+                            {{ uploaded_files.count }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-md-6">
+
+                <div class="card shadow-sm border-0">
+
+                    <div class="card-body">
+
+                        <p class="text-muted mb-1">Storage Network</p>
+
+                        <h5 class="mb-0 text-success">
+                            IPFS Enabled
+                        </h5>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-12">
+
+                <div class="card shadow-sm border-0">
+
+                    <div class="card-body">
+
+                        <h5 class="mb-2">How it works</h5>
+
+                        <p class="text-muted mb-0">
+                            Your file is sent to the local IPFS daemon. IPFS returns a unique CID. Django stores that CID so the file can be viewed later using the IPFS gateway.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Uploaded Files Table -->
+<div class="card shadow-sm border-0 mt-4">
+
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+
+        <strong>Uploaded Files</strong>
+
+        <span class="badge bg-primary">
+            {{ uploaded_files.count }} files
+        </span>
+
+    </div>
+
+    <div class="card-body">
+
+        {% if uploaded_files %}
+
+            <div class="table-responsive">
+
+                <table class="table align-middle">
+
+                    <thead>
+
+                        <tr>
+                            <th>Filename</th>
+                            <th>CID</th>
+                            <th>Size</th>
+                            <th>Uploaded At</th>
+                            <th>Action</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for file in uploaded_files %}
+
+                            <tr>
+
+                                <td>
+                                    <strong>{{ file.original_filename }}</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        {{ file.content_type|default:"Unknown type" }}
+                                    </small>
+                                </td>
+
+                                <td>
+                                    <code style="font-size: 13px;">
+                                        {{ file.cid }}
+                                    </code>
+                                </td>
+
+                                <td>
+                                    {{ file.file_size_mb }} MB
+                                </td>
+
+                                <td>
+                                    {{ file.uploaded_at }}
+                                </td>
+
+                                <td>
+                                    <div class="d-flex gap-2">
+
+                                    <a href="{{ file.gateway_url }}"
+       target="_blank"
+       class="btn btn-sm btn-outline-primary">
+        View
+                                </a>
+
+    <a href="{% url 'download_file' file.id %}"
+       class="btn btn-sm btn-success">
+        Download
+    </a>
+
+</div>
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        {% else %}
+
+            <div class="text-center py-5">
+
+                <h5>No files uploaded yet</h5>
+
+                <p class="text-muted mb-0">
+                    Upload your first file to IPFS using the form above.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
 
 {% endblock %}

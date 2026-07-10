@@ -26,4 +26,9 @@ urlpatterns = [
         views.heartbeat,
         name="heartbeat",
     ),
+    path(
+        "files/<int:file_id>/download/",
+        views.download_file,
+        name="download_file",
+    ),
 ]

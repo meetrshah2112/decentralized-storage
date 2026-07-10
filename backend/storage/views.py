@@ -1,5 +1,6 @@
 from django.contrib import messages
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
@@ -8,10 +9,15 @@ from django.views.decorators.http import require_POST
 from django.http import JsonResponse
 from django.utils import timezone
 from datetime import timedelta
-
 from .forms import RegistrationForm, StorageNodeForm
 from .models import StorageNode
-
+from .forms import (
+    RegistrationForm,
+    StorageNodeForm,
+    FileUploadForm,
+)
+from .models import StorageNode, UploadedFile
+from .ipfs_client import add_file_to_ipfs, get_file_from_ipfs
 import json
 
 
@@ -26,6 +32,40 @@ class CustomLoginView(LoginView):
             return reverse_lazy("provider_dashboard")
 
         return reverse_lazy("consumer_dashboard")
+
+
+@login_required
+def download_file(request, file_id):
+
+    uploaded_file = get_object_or_404(
+        UploadedFile,
+        id=file_id,
+        owner=request.user,
+    )
+
+    try:
+        file_content = get_file_from_ipfs(
+            uploaded_file.cid,
+        )
+
+        response = HttpResponse(
+            file_content,
+            content_type=uploaded_file.content_type or "application/octet-stream",
+        )
+
+        response["Content-Disposition"] = (
+            f'attachment; filename="{uploaded_file.original_filename}"'
+        )
+
+        return response
+
+    except Exception as error:
+        messages.error(
+            request,
+            f"File download failed: {error}",
+        )
+
+        return redirect("consumer_dashboard")
 
 
 def register(request):
@@ -104,7 +144,109 @@ def heartbeat(request):
 
 @login_required
 def consumer_dashboard(request):
-    return render(request, "storage/consumer_dashboard.html")
+    if request.method == "POST":
+        form = FileUploadForm(
+            request.POST,
+            request.FILES,
+        )
+
+        if form.is_valid():
+            uploaded_file = request.FILES["file"]
+
+            try:
+                ipfs_result = add_file_to_ipfs(
+                    uploaded_file,
+                    uploaded_file.name,
+                )
+
+                cid = ipfs_result["Hash"]
+
+                active_since = timezone.now() - timedelta(seconds=60)
+
+                provider_node = (
+                    StorageNode.objects.filter(
+                        ipfs_status=True,
+                        last_heartbeat__gte=active_since,
+                    )
+                    .order_by(
+                        "-last_heartbeat",
+                    )
+                    .first()
+                )
+
+                if not provider_node:
+                    messages.error(
+                        request,
+                        "No active provider node available. Please start the provider Node Agent and IPFS daemon.",
+                    )
+                    return redirect("consumer_dashboard")
+
+                UploadedFile.objects.create(
+                    owner=request.user,
+                    provider_node=provider_node,
+                    original_filename=uploaded_file.name,
+                    cid=cid,
+                    file_size=uploaded_file.size,
+                    content_type=uploaded_file.content_type or "",
+                )
+
+                # Update consumer storage usage
+                profile = request.user.profile
+                profile.storage_used += uploaded_file.size
+                profile.save(
+                    update_fields=[
+                        "storage_used",
+                        "updated_at",
+                    ]
+                )
+
+                # Update provider node storage usage
+                if provider_node:
+                    provider_node.storage_used += uploaded_file.size
+                    provider_node.save(
+                        update_fields=[
+                            "storage_used",
+                            "updated_at",
+                        ]
+                    )
+
+                    provider_profile = provider_node.owner.profile
+                    provider_profile.storage_contributed += uploaded_file.size
+                    provider_profile.save(
+                        update_fields=[
+                            "storage_contributed",
+                            "updated_at",
+                        ]
+                    )
+
+                messages.success(
+                    request,
+                    "File uploaded to IPFS successfully.",
+                )
+
+                return redirect("consumer_dashboard")
+
+            except Exception as error:
+                messages.error(
+                    request,
+                    f"IPFS upload failed: {error}",
+                )
+
+    else:
+        form = FileUploadForm()
+
+    uploaded_files = UploadedFile.objects.filter(
+        owner=request.user,
+    ).order_by("-uploaded_at")
+
+    return render(
+        request,
+        "storage/consumer_dashboard.html",
+        {
+            "form": form,
+            "uploaded_files": uploaded_files,
+        },
+    )
 
 
 @login_required
