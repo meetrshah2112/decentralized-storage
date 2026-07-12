@@ -12,6 +12,11 @@ urlpatterns = [
         name="consumer_dashboard",
     ),
     path(
+        "become-provider/",
+        views.become_provider,
+        name="become_provider",
+    ),
+    path(
         "provider/dashboard/",
         views.provider_dashboard,
         name="provider_dashboard",

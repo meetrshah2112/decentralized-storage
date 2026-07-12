@@ -1,4 +1,7 @@
 from django.contrib import messages
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
@@ -66,6 +69,33 @@ def download_file(request, file_id):
         )
 
         return redirect("consumer_dashboard")
+
+
+@login_required
+def become_provider(request):
+
+    profile = request.user.profile
+
+    if profile.role == "provider":
+        return redirect("provider_dashboard")
+
+    if request.method == "POST":
+        profile.role = "provider"
+        profile.save(
+            update_fields=[
+                "role",
+                "updated_at",
+            ]
+        )
+
+        messages.success(
+            request,
+            "You are now registered as a storage provider. Please register your storage node.",
+        )
+
+        return redirect("register_storage_node")
+
+    return redirect("consumer_dashboard")
 
 
 def register(request):

@@ -20,6 +20,8 @@ npm-debug.log
 # Environment variables
 .env
 
+backend/ipfs_test.txt
+
 # IDE
 .vscode/
 .idea/

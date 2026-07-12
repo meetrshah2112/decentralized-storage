@@ -9,8 +9,67 @@
     <div>
         <h2 class="mb-1">Consumer Dashboard</h2>
         <p class="text-muted mb-0">
-            Welcome {{ user.username }}. Upload files to IPFS and manage your CIDs.
+            Welcome {{ user.username }}. Upload files to IPFS and manage your decentralized storage files.
         </p>
+    </div>
+
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-4 mb-4">
+
+    <div class="col-md-4">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body text-center">
+
+                <p class="text-muted mb-1">Uploaded Files</p>
+
+                <h2 class="text-primary mb-0">
+                    {{ uploaded_files.count }}
+                </h2>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-4">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body text-center">
+
+                <p class="text-muted mb-1">Storage Network</p>
+
+                <h5 class="text-success mb-0">
+                    🟢 IPFS Enabled
+                </h5>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-4">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body text-center">
+
+                <p class="text-muted mb-1">Account Type</p>
+
+                <h5 class="text-info mb-0">
+                    Consumer
+                </h5>
+
+            </div>
+
+        </div>
+
     </div>
 
 </div>
@@ -29,7 +88,7 @@
             <div class="card-body">
 
                 <p class="text-muted">
-                    Select a file from your computer. The file will be uploaded to IPFS and its CID will be stored in Django.
+                    Select a file from your computer. Django will upload it to IPFS, receive a CID, and store that CID in the database.
                 </p>
 
                 <form method="post" enctype="multipart/form-data">
@@ -41,8 +100,12 @@
                         {{ form.file }}
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100">
-                        Upload to IPFS
+                    <button
+                        type="submit"
+                        class="btn btn-primary w-100 py-2">
+
+                        ⬆ Upload to IPFS
+
                     </button>
 
                 </form>
@@ -53,40 +116,24 @@
 
     </div>
 
-    <!-- Summary Card -->
+    <!-- Info Section -->
     <div class="col-lg-7">
 
         <div class="row g-4">
 
-            <div class="col-md-6">
+            <div class="col-12">
 
-                <div class="card shadow-sm border-0">
-
-                    <div class="card-body">
-
-                        <p class="text-muted mb-1">Total Uploaded Files</p>
-
-                        <h3 class="mb-0">
-                            {{ uploaded_files.count }}
-                        </h3>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="col-md-6">
-
-                <div class="card shadow-sm border-0">
+                <div class="card shadow-sm border-0 h-100">
 
                     <div class="card-body">
 
-                        <p class="text-muted mb-1">Storage Network</p>
-
-                        <h5 class="mb-0 text-success">
-                            IPFS Enabled
+                        <h5 class="mb-2">
+                            How it works
                         </h5>
+
+                        <p class="text-muted mb-0">
+                            Your file is sent to the local IPFS daemon. IPFS returns a unique CID. Django stores that CID so the file can be viewed or downloaded later.
+                        </p>
 
                     </div>
 
@@ -96,19 +143,64 @@
 
             <div class="col-12">
 
-                <div class="card shadow-sm border-0">
+                <div class="card shadow-sm border-0 h-100">
 
                     <div class="card-body">
 
-                        <h5 class="mb-2">How it works</h5>
+                        <h5 class="mb-2">
+                            CID Based Storage
+                        </h5>
 
                         <p class="text-muted mb-0">
-                            Your file is sent to the local IPFS daemon. IPFS returns a unique CID. Django stores that CID so the file can be viewed later using the IPFS gateway.
+                            Every uploaded file receives a content identifier. The same file will always produce the same CID, which is the core idea behind content-addressed decentralized storage.
                         </p>
 
                     </div>
 
                 </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Become Provider Card -->
+<div class="card shadow-sm border-0 mt-4">
+
+    <div class="card-body">
+
+        <div class="row align-items-center">
+
+            <div class="col-md-8">
+
+                <h5 class="mb-2">
+                    🚀 Become a Storage Provider
+                </h5>
+
+                <p class="text-muted mb-md-0">
+                    Have unused storage on your laptop? Become a provider and contribute storage to the decentralized network.
+                </p>
+
+            </div>
+
+            <div class="col-md-4 text-md-end">
+
+                <form method="post" action="{% url 'become_provider' %}">
+
+                    {% csrf_token %}
+
+                    <button
+                        type="submit"
+                        class="btn btn-outline-primary">
+
+                        Become Provider
+
+                    </button>
+
+                </form>
 
             </div>
 
@@ -167,7 +259,7 @@
 
                                 <td>
                                     <code style="font-size: 13px;">
-                                        {{ file.cid }}
+                                        {{ file.cid|slice:":18" }}...
                                     </code>
                                 </td>
 
@@ -176,24 +268,32 @@
                                 </td>
 
                                 <td>
-                                    {{ file.uploaded_at }}
+                                    {{ file.uploaded_at|date:"d M Y, h:i A" }}
                                 </td>
 
                                 <td>
-                                    <div class="d-flex gap-2">
 
-                                    <a href="{{ file.gateway_url }}"
-       target="_blank"
-       class="btn btn-sm btn-outline-primary">
-        View
-                                </a>
+                                    <div class="btn-group">
 
-    <a href="{% url 'download_file' file.id %}"
-       class="btn btn-sm btn-success">
-        Download
-    </a>
+                                        <a
+                                            href="{{ file.gateway_url }}"
+                                            target="_blank"
+                                            class="btn btn-sm btn-outline-primary">
 
-</div>
+                                            View
+
+                                        </a>
+
+                                        <a
+                                            href="{% url 'download_file' file.id %}"
+                                            class="btn btn-sm btn-success">
+
+                                            Download
+
+                                        </a>
+
+                                    </div>
+
                                 </td>
 
                             </tr>
