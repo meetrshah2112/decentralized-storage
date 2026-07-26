@@ -23,6 +23,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # Storage app
     path("", include("storage.urls")),
+    # Rest Framework API
+    path("api/", include("storage.api_urls")),
     # Django Authentication
     path(
         "accounts/",
