@@ -1,27 +1,23 @@
+from datetime import timedelta
+import json
+
 from django.contrib import messages
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.http import JsonResponse
-from django.utils import timezone
-from datetime import timedelta
-from .forms import RegistrationForm, StorageNodeForm
-from .models import StorageNode
+
 from .forms import (
     RegistrationForm,
     StorageNodeForm,
     FileUploadForm,
 )
-from .models import StorageNode, UploadedFile
 from .ipfs_client import add_file_to_ipfs, get_file_from_ipfs
-import json
+from .models import StorageNode, UploadedFile
 
 
 class CustomLoginView(LoginView):
