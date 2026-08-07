@@ -1,9 +1,11 @@
 import requests
+
 from utils import get_system_info
 
 from config import (
     BACKEND_URL,
     NODE_UUID,
+    AGENT_PUBLIC_URL,
 )
 
 
@@ -13,6 +15,7 @@ def send_heartbeat():
 
     payload = {
         "node_uuid": NODE_UUID,
+        "agent_api_url": AGENT_PUBLIC_URL,
         **get_system_info(),
     }
 

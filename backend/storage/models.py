@@ -109,6 +109,11 @@ class StorageNode(models.Model):
         blank=True,
     )
 
+    agent_api_url = models.URLField(
+        max_length=255,
+        blank=True,
+    )
+
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,

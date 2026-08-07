@@ -1,6 +1,7 @@
 from datetime import timedelta
 import json
-
+from .provider_selection import select_best_provider_node
+from .provider_agent_client import upload_file_to_provider
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
@@ -141,13 +142,15 @@ def heartbeat(request):
 
         node.last_heartbeat = timezone.now()
         node.is_online = True
-        node.available_storage = request.POST.get("available_storage", 0)
-        node.total_storage = request.POST.get("total_storage", 0)
+        node.available_storage = int(request.POST.get("available_storage", 0))
+        node.total_storage = int(request.POST.get("total_storage", 0))
         node.operating_system = request.POST.get("operating_system", "")
         node.agent_version = request.POST.get("agent_version", "0.1.0")
         node.ipfs_status = request.POST.get("ipfs_status") == "True"
         node.ipfs_peer_id = request.POST.get("ipfs_peer_id", "")
         node.ipfs_version = request.POST.get("ipfs_version", "")
+        node.agent_api_url = request.POST.get("agent_api_url", "")
+
         node.save()
 
         return JsonResponse(
@@ -171,99 +174,72 @@ def heartbeat(request):
 @login_required
 def consumer_dashboard(request):
     if request.method == "POST":
-        form = FileUploadForm(
-            request.POST,
-            request.FILES,
-        )
+        form = FileUploadForm(request.POST, request.FILES)
 
         if form.is_valid():
             uploaded_file = request.FILES["file"]
 
-            try:
-                ipfs_result = add_file_to_ipfs(
-                    uploaded_file,
-                    uploaded_file.name,
-                )
+            # 2. Select active provider node ONCE before uploading
+            provider_node = select_best_provider_node(uploaded_file.size)
 
-                cid = ipfs_result["Hash"]
-
-                active_since = timezone.now() - timedelta(seconds=60)
-
-                provider_node = (
-                    StorageNode.objects.filter(
-                        ipfs_status=True,
-                        last_heartbeat__gte=active_since,
-                    )
-                    .order_by(
-                        "-last_heartbeat",
-                    )
-                    .first()
-                )
-
-                if not provider_node:
-                    messages.error(
-                        request,
-                        "No active provider node available. Please start the provider Node Agent and IPFS daemon.",
-                    )
-                    return redirect("consumer_dashboard")
-
-                UploadedFile.objects.create(
-                    owner=request.user,
-                    provider_node=provider_node,
-                    original_filename=uploaded_file.name,
-                    cid=cid,
-                    file_size=uploaded_file.size,
-                    content_type=uploaded_file.content_type or "",
-                )
-
-                # Update consumer storage usage
-                profile = request.user.profile
-                profile.storage_used += uploaded_file.size
-                profile.save(
-                    update_fields=[
-                        "storage_used",
-                        "updated_at",
-                    ]
-                )
-
-                # Update provider node storage usage
-                if provider_node:
-                    provider_node.storage_used += uploaded_file.size
-                    provider_node.save(
-                        update_fields=[
-                            "storage_used",
-                            "updated_at",
-                        ]
-                    )
-
-                    provider_profile = provider_node.owner.profile
-                    provider_profile.storage_contributed += uploaded_file.size
-                    provider_profile.save(
-                        update_fields=[
-                            "storage_contributed",
-                            "updated_at",
-                        ]
-                    )
-
-                messages.success(
+            if not provider_node:
+                messages.error(
                     request,
-                    "File uploaded to IPFS successfully.",
+                    "No active provider node with enough storage is available. Please check node agent status.",
+                )
+                return redirect("consumer_dashboard")
+
+            try:
+                # 3. Perform IPFS Upload using the locked provider node
+                provider_result = upload_file_to_provider(
+                    provider_node=provider_node,
+                    file_obj=uploaded_file,
+                    filename=uploaded_file.name,
                 )
 
+                cid = provider_result["cid"]
+
+                # 4. Atomic Database Updates
+                with transaction.atomic():
+                    # Create upload record bound to the correct provider_node
+                    UploadedFile.objects.create(
+                        owner=request.user,
+                        provider_node=provider_node,
+                        original_filename=uploaded_file.name,
+                        cid=cid,
+                        file_size=uploaded_file.size,
+                        content_type=uploaded_file.content_type or "",
+                    )
+
+                    # Update consumer usage atomically (prevents race conditions)
+                    profile.storage_used = F("storage_used") + uploaded_file.size
+                    profile.save(update_fields=["storage_used", "updated_at"])
+
+                    # Update provider node storage usage atomically
+                    provider_node.storage_used = F("storage_used") + uploaded_file.size
+                    provider_node.save(update_fields=["storage_used", "updated_at"])
+
+                    # Update provider user's contributed storage atomically
+                    provider_profile = provider_node.owner.profile
+                    provider_profile.storage_contributed = (
+                        F("storage_contributed") + uploaded_file.size
+                    )
+                    provider_profile.save(
+                        update_fields=["storage_contributed", "updated_at"]
+                    )
+
+                messages.success(request, "File uploaded to IPFS successfully.")
                 return redirect("consumer_dashboard")
 
             except Exception as error:
-                messages.error(
-                    request,
-                    f"IPFS upload failed: {error}",
-                )
+                messages.error(request, f"IPFS upload failed: {error}")
 
     else:
         form = FileUploadForm()
 
-    uploaded_files = UploadedFile.objects.filter(
-        owner=request.user,
-    ).order_by("-uploaded_at")
+    uploaded_files = UploadedFile.objects.filter(owner=request.user).order_by(
+        "-uploaded_at"
+    )
 
     return render(
         request,

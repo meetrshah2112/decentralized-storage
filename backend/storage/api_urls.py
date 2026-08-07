@@ -63,4 +63,9 @@ urlpatterns = [
         api_views.api_admin_stats,
         name="api_admin_stats",
     ),
+    path(
+        "provider/node/register/",
+        api_views.api_provider_node_register,
+        name="api_provider_node_register",
+    ),
 ]

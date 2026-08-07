@@ -156,6 +156,7 @@ class StorageNodeSerializer(serializers.ModelSerializer):
             "ipfs_status",
             "ipfs_peer_id",
             "ipfs_version",
+            "agent_api_url",
             "last_heartbeat",
             "online",
             "status",
