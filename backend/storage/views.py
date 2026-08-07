@@ -11,6 +11,9 @@ from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.db import transaction
+from django.db.models import F
+
 
 from .forms import (
     RegistrationForm,
@@ -210,6 +213,8 @@ def consumer_dashboard(request):
                         file_size=uploaded_file.size,
                         content_type=uploaded_file.content_type or "",
                     )
+
+                    profile = request.user.profile
 
                     # Update consumer usage atomically (prevents race conditions)
                     profile.storage_used = F("storage_used") + uploaded_file.size

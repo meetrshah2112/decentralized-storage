@@ -551,6 +551,7 @@ def api_network_stats(request):
                 "offline_nodes": total_nodes - online_nodes,
                 "ipfs_connected_nodes": ipfs_connected_nodes,
                 "total_files": total_files,
+                "total_storage_used": total_storage_used,
                 "total_storage_used_bytes": total_storage_used,
                 "total_storage_used_mb": round(
                     total_storage_used / (1024 * 1024),
