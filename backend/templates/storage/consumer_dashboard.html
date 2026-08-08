@@ -1,6 +1,5 @@
-{% extends "base.html" %} {% block title %}Consumer Dashboard{% endblock %} {%
-block content %}
-
+{% extends "base.html" %} {% block title %}Consumer Dashboard{% endblock %}
+{%block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
   <div>
     <h2 class="mb-1">Consumer Dashboard</h2>
@@ -17,7 +16,6 @@ block content %}
     <div class="card shadow-sm border-0 h-100">
       <div class="card-body text-center">
         <p class="text-muted mb-1">Uploaded Files</p>
-
         <h2 class="text-primary mb-0">{{ uploaded_files.count }}</h2>
       </div>
     </div>
@@ -27,7 +25,6 @@ block content %}
     <div class="card shadow-sm border-0 h-100">
       <div class="card-body text-center">
         <p class="text-muted mb-1">Storage Network</p>
-
         <h5 class="text-success mb-0">🟢 IPFS Enabled</h5>
       </div>
     </div>
@@ -37,7 +34,6 @@ block content %}
     <div class="card shadow-sm border-0 h-100">
       <div class="card-body text-center">
         <p class="text-muted mb-1">Account Type</p>
-
         <h5 class="text-info mb-0">Consumer</h5>
       </div>
     </div>
@@ -60,7 +56,6 @@ block content %}
 
         <form method="post" enctype="multipart/form-data">
           {% csrf_token %}
-
           <div class="mb-3">{{ form.file.label_tag }} {{ form.file }}</div>
 
           <button type="submit" class="btn btn-primary w-100 py-2">
@@ -78,7 +73,6 @@ block content %}
         <div class="card shadow-sm border-0 h-100">
           <div class="card-body">
             <h5 class="mb-2">How it works</h5>
-
             <p class="text-muted mb-0">
               Your file is sent to the local IPFS daemon. IPFS returns a unique
               CID. Django stores that CID so the file can be viewed or
@@ -92,7 +86,6 @@ block content %}
         <div class="card shadow-sm border-0 h-100">
           <div class="card-body">
             <h5 class="mb-2">CID Based Storage</h5>
-
             <p class="text-muted mb-0">
               Every uploaded file receives a content identifier. The same file
               will always produce the same CID, which is the core idea behind
@@ -111,7 +104,6 @@ block content %}
     <div class="row align-items-center">
       <div class="col-md-8">
         <h5 class="mb-2">🚀 Become a Storage Provider</h5>
-
         <p class="text-muted mb-md-0">
           Have unused storage on your laptop? Become a provider and contribute
           storage to the decentralized network.
@@ -121,7 +113,6 @@ block content %}
       <div class="col-md-4 text-md-end">
         <form method="post" action="{% url 'become_provider' %}">
           {% csrf_token %}
-
           <button type="submit" class="btn btn-outline-primary">
             Become Provider
           </button>
@@ -137,13 +128,11 @@ block content %}
     class="card-header bg-white d-flex justify-content-between align-items-center"
   >
     <strong>Uploaded Files</strong>
-
-    <span class="badge bg-primary"> {{ uploaded_files.count }} files </span>
+    <span class="badge bg-primary">{{ uploaded_files.count }} files</span>
   </div>
 
   <div class="card-body">
     {% if uploaded_files %}
-
     <div class="table-responsive">
       <table class="table align-middle">
         <thead>
@@ -158,7 +147,6 @@ block content %}
 
         <tbody>
           {% for file in uploaded_files %}
-
           <tr>
             <td>
               <strong>{{ file.original_filename }}</strong>
@@ -197,24 +185,19 @@ block content %}
               </div>
             </td>
           </tr>
-
           {% endfor %}
         </tbody>
       </table>
     </div>
 
     {% else %}
-
     <div class="text-center py-5">
       <h5>No files uploaded yet</h5>
-
       <p class="text-muted mb-0">
         Upload your first file to IPFS using the form above.
       </p>
     </div>
-
     {% endif %}
   </div>
 </div>
-
 {% endblock %}
