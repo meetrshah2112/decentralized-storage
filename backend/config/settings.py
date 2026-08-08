@@ -145,24 +145,18 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 LOGIN_URL = "/accounts/login/"
 
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000",
-#     "http://127.0.0.1:3000",
-#     "http://localhost:5173",
-#     "http://127.0.0.1:5173",
-#     "*",
-# ]
-
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
     "192.168.29.121",
     "10.34.230.78",
+    "192.168.0.105",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://192.168.29.121:8000",
     "http://10.34.230.78:8000",
+    "http://192.168.0.105:8000",
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True

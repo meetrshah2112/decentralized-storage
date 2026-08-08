@@ -1,327 +1,220 @@
-{% extends "base.html" %}
-
-{% block title %}Consumer Dashboard{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Consumer Dashboard{% endblock %} {%
+block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-
-    <div>
-        <h2 class="mb-1">Consumer Dashboard</h2>
-        <p class="text-muted mb-0">
-            Welcome {{ user.username }}. Upload files to IPFS and manage your decentralized storage files.
-        </p>
-    </div>
-
+  <div>
+    <h2 class="mb-1">Consumer Dashboard</h2>
+    <p class="text-muted mb-0">
+      Welcome {{ user.username }}. Upload files to IPFS and manage your
+      decentralized storage files.
+    </p>
+  </div>
 </div>
 
 <!-- Summary Cards -->
 <div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body text-center">
+        <p class="text-muted mb-1">Uploaded Files</p>
 
-    <div class="col-md-4">
-
-        <div class="card shadow-sm border-0 h-100">
-
-            <div class="card-body text-center">
-
-                <p class="text-muted mb-1">Uploaded Files</p>
-
-                <h2 class="text-primary mb-0">
-                    {{ uploaded_files.count }}
-                </h2>
-
-            </div>
-
-        </div>
-
+        <h2 class="text-primary mb-0">{{ uploaded_files.count }}</h2>
+      </div>
     </div>
+  </div>
 
-    <div class="col-md-4">
+  <div class="col-md-4">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body text-center">
+        <p class="text-muted mb-1">Storage Network</p>
 
-        <div class="card shadow-sm border-0 h-100">
-
-            <div class="card-body text-center">
-
-                <p class="text-muted mb-1">Storage Network</p>
-
-                <h5 class="text-success mb-0">
-                    🟢 IPFS Enabled
-                </h5>
-
-            </div>
-
-        </div>
-
+        <h5 class="text-success mb-0">🟢 IPFS Enabled</h5>
+      </div>
     </div>
+  </div>
 
-    <div class="col-md-4">
+  <div class="col-md-4">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body text-center">
+        <p class="text-muted mb-1">Account Type</p>
 
-        <div class="card shadow-sm border-0 h-100">
-
-            <div class="card-body text-center">
-
-                <p class="text-muted mb-1">Account Type</p>
-
-                <h5 class="text-info mb-0">
-                    Consumer
-                </h5>
-
-            </div>
-
-        </div>
-
+        <h5 class="text-info mb-0">Consumer</h5>
+      </div>
     </div>
-
+  </div>
 </div>
 
 <div class="row g-4">
+  <!-- Upload Card -->
+  <div class="col-lg-5">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white">
+        <strong>Upload File to IPFS</strong>
+      </div>
 
-    <!-- Upload Card -->
-    <div class="col-lg-5">
+      <div class="card-body">
+        <p class="text-muted">
+          Select a file from your computer. Django will upload it to IPFS,
+          receive a CID, and store that CID in the database.
+        </p>
 
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="mb-3">{{ form.file.label_tag }} {{ form.file }}</div>
+
+          <button type="submit" class="btn btn-primary w-100 py-2">
+            ⬆ Upload to IPFS
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Section -->
+  <div class="col-lg-7">
+    <div class="row g-4">
+      <div class="col-12">
         <div class="card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <h5 class="mb-2">How it works</h5>
 
-            <div class="card-header bg-white">
-                <strong>Upload File to IPFS</strong>
-            </div>
-
-            <div class="card-body">
-
-                <p class="text-muted">
-                    Select a file from your computer. Django will upload it to IPFS, receive a CID, and store that CID in the database.
-                </p>
-
-                <form method="post" enctype="multipart/form-data">
-
-                    {% csrf_token %}
-
-                    <div class="mb-3">
-                        {{ form.file.label_tag }}
-                        {{ form.file }}
-                    </div>
-
-                    <button
-                        type="submit"
-                        class="btn btn-primary w-100 py-2">
-
-                        ⬆ Upload to IPFS
-
-                    </button>
-
-                </form>
-
-            </div>
-
+            <p class="text-muted mb-0">
+              Your file is sent to the local IPFS daemon. IPFS returns a unique
+              CID. Django stores that CID so the file can be viewed or
+              downloaded later.
+            </p>
+          </div>
         </div>
+      </div>
 
-    </div>
+      <div class="col-12">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <h5 class="mb-2">CID Based Storage</h5>
 
-    <!-- Info Section -->
-    <div class="col-lg-7">
-
-        <div class="row g-4">
-
-            <div class="col-12">
-
-                <div class="card shadow-sm border-0 h-100">
-
-                    <div class="card-body">
-
-                        <h5 class="mb-2">
-                            How it works
-                        </h5>
-
-                        <p class="text-muted mb-0">
-                            Your file is sent to the local IPFS daemon. IPFS returns a unique CID. Django stores that CID so the file can be viewed or downloaded later.
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div class="col-12">
-
-                <div class="card shadow-sm border-0 h-100">
-
-                    <div class="card-body">
-
-                        <h5 class="mb-2">
-                            CID Based Storage
-                        </h5>
-
-                        <p class="text-muted mb-0">
-                            Every uploaded file receives a content identifier. The same file will always produce the same CID, which is the core idea behind content-addressed decentralized storage.
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
+            <p class="text-muted mb-0">
+              Every uploaded file receives a content identifier. The same file
+              will always produce the same CID, which is the core idea behind
+              content-addressed decentralized storage.
+            </p>
+          </div>
         </div>
-
+      </div>
     </div>
-
+  </div>
 </div>
 
 <!-- Become Provider Card -->
 <div class="card shadow-sm border-0 mt-4">
+  <div class="card-body">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h5 class="mb-2">🚀 Become a Storage Provider</h5>
 
-    <div class="card-body">
+        <p class="text-muted mb-md-0">
+          Have unused storage on your laptop? Become a provider and contribute
+          storage to the decentralized network.
+        </p>
+      </div>
 
-        <div class="row align-items-center">
+      <div class="col-md-4 text-md-end">
+        <form method="post" action="{% url 'become_provider' %}">
+          {% csrf_token %}
 
-            <div class="col-md-8">
-
-                <h5 class="mb-2">
-                    🚀 Become a Storage Provider
-                </h5>
-
-                <p class="text-muted mb-md-0">
-                    Have unused storage on your laptop? Become a provider and contribute storage to the decentralized network.
-                </p>
-
-            </div>
-
-            <div class="col-md-4 text-md-end">
-
-                <form method="post" action="{% url 'become_provider' %}">
-
-                    {% csrf_token %}
-
-                    <button
-                        type="submit"
-                        class="btn btn-outline-primary">
-
-                        Become Provider
-
-                    </button>
-
-                </form>
-
-            </div>
-
-        </div>
-
+          <button type="submit" class="btn btn-outline-primary">
+            Become Provider
+          </button>
+        </form>
+      </div>
     </div>
-
+  </div>
 </div>
 
 <!-- Uploaded Files Table -->
 <div class="card shadow-sm border-0 mt-4">
+  <div
+    class="card-header bg-white d-flex justify-content-between align-items-center"
+  >
+    <strong>Uploaded Files</strong>
 
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <span class="badge bg-primary"> {{ uploaded_files.count }} files </span>
+  </div>
 
-        <strong>Uploaded Files</strong>
+  <div class="card-body">
+    {% if uploaded_files %}
 
-        <span class="badge bg-primary">
-            {{ uploaded_files.count }} files
-        </span>
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Filename</th>
+            <th>CID</th>
+            <th>Size</th>
+            <th>Uploaded At</th>
+            <th>Action</th>
+          </tr>
+        </thead>
 
+        <tbody>
+          {% for file in uploaded_files %}
+
+          <tr>
+            <td>
+              <strong>{{ file.original_filename }}</strong>
+              <br />
+              <small class="text-muted">
+                {{ file.content_type|default:"Unknown type" }}
+              </small>
+            </td>
+
+            <td>
+              <code style="font-size: 13px">
+                {{ file.cid|slice:":18" }}...
+              </code>
+            </td>
+
+            <td>{{ file.file_size_mb }} MB</td>
+
+            <td>{{ file.uploaded_at|date:"d M Y, h:i A" }}</td>
+
+            <td>
+              <div class="btn-group">
+                <a
+                  href="{% url 'view_file' file.id %}"
+                  class="btn btn-sm btn-outline-primary"
+                  target="_blank"
+                >
+                  View
+                </a>
+
+                <a
+                  href="{% url 'download_file' file.id %}"
+                  class="btn btn-sm btn-outline-success"
+                >
+                  Download
+                </a>
+              </div>
+            </td>
+          </tr>
+
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
-    <div class="card-body">
+    {% else %}
 
-        {% if uploaded_files %}
+    <div class="text-center py-5">
+      <h5>No files uploaded yet</h5>
 
-            <div class="table-responsive">
-
-                <table class="table align-middle">
-
-                    <thead>
-
-                        <tr>
-                            <th>Filename</th>
-                            <th>CID</th>
-                            <th>Size</th>
-                            <th>Uploaded At</th>
-                            <th>Action</th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        {% for file in uploaded_files %}
-
-                            <tr>
-
-                                <td>
-                                    <strong>{{ file.original_filename }}</strong>
-                                    <br>
-                                    <small class="text-muted">
-                                        {{ file.content_type|default:"Unknown type" }}
-                                    </small>
-                                </td>
-
-                                <td>
-                                    <code style="font-size: 13px;">
-                                        {{ file.cid|slice:":18" }}...
-                                    </code>
-                                </td>
-
-                                <td>
-                                    {{ file.file_size_mb }} MB
-                                </td>
-
-                                <td>
-                                    {{ file.uploaded_at|date:"d M Y, h:i A" }}
-                                </td>
-
-                                <td>
-
-                                    <div class="btn-group">
-
-                                        <a
-                                            href="{{ file.gateway_url }}"
-                                            target="_blank"
-                                            class="btn btn-sm btn-outline-primary">
-
-                                            View
-
-                                        </a>
-
-                                        <a
-                                            href="{% url 'download_file' file.id %}"
-                                            class="btn btn-sm btn-success">
-
-                                            Download
-
-                                        </a>
-
-                                    </div>
-
-                                </td>
-
-                            </tr>
-
-                        {% endfor %}
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        {% else %}
-
-            <div class="text-center py-5">
-
-                <h5>No files uploaded yet</h5>
-
-                <p class="text-muted mb-0">
-                    Upload your first file to IPFS using the form above.
-                </p>
-
-            </div>
-
-        {% endif %}
-
+      <p class="text-muted mb-0">
+        Upload your first file to IPFS using the form above.
+      </p>
     </div>
 
+    {% endif %}
+  </div>
 </div>
 
 {% endblock %}

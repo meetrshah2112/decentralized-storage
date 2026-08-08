@@ -13,6 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.db import transaction
 from django.db.models import F
+from .provider_agent_client import upload_file_to_provider, download_file_from_provider
 
 
 from .forms import (
@@ -39,16 +40,23 @@ class CustomLoginView(LoginView):
 
 @login_required
 def download_file(request, file_id):
-
     uploaded_file = get_object_or_404(
         UploadedFile,
         id=file_id,
         owner=request.user,
     )
 
+    if not uploaded_file.provider_node:
+        messages.error(
+            request,
+            "Provider node information is missing for this file.",
+        )
+        return redirect("consumer_dashboard")
+
     try:
-        file_content = get_file_from_ipfs(
-            uploaded_file.cid,
+        file_content = download_file_from_provider(
+            provider_node=uploaded_file.provider_node,
+            cid=uploaded_file.cid,
         )
 
         response = HttpResponse(
@@ -67,7 +75,46 @@ def download_file(request, file_id):
             request,
             f"File download failed: {error}",
         )
+        return redirect("consumer_dashboard")
 
+
+@login_required
+def view_file(request, file_id):
+    uploaded_file = get_object_or_404(
+        UploadedFile,
+        id=file_id,
+        owner=request.user,
+    )
+
+    if not uploaded_file.provider_node:
+        messages.error(
+            request,
+            "Provider node information is missing for this file.",
+        )
+        return redirect("consumer_dashboard")
+
+    try:
+        file_content = download_file_from_provider(
+            provider_node=uploaded_file.provider_node,
+            cid=uploaded_file.cid,
+        )
+
+        response = HttpResponse(
+            file_content,
+            content_type=uploaded_file.content_type or "application/octet-stream",
+        )
+
+        response["Content-Disposition"] = (
+            f'inline; filename="{uploaded_file.original_filename}"'
+        )
+
+        return response
+
+    except Exception as error:
+        messages.error(
+            request,
+            f"File view failed: {error}",
+        )
         return redirect("consumer_dashboard")
 
 

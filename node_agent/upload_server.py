@@ -1,11 +1,12 @@
-from flask import Flask, jsonify, request
-
+from flask import Flask, jsonify, request, Response
 from config import AGENT_HOST, AGENT_PORT
+
 from ipfs_client import (
     ipfs_available,
     get_peer_id,
     get_version,
     add_file_to_ipfs,
+    get_file_from_ipfs,
 )
 
 app = Flask(__name__)
@@ -50,6 +51,41 @@ def upload():
                 "name": ipfs_result.get("Name", uploaded_file.filename),
                 "size": ipfs_result.get("Size"),
             }
+        )
+
+    except Exception as error:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": str(error),
+                }
+            ),
+            500,
+        )
+
+
+@app.route("/download/", methods=["GET"])
+def download():
+    cid = request.args.get("cid")
+
+    if not cid:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "CID is required.",
+                }
+            ),
+            400,
+        )
+
+    try:
+        file_content = get_file_from_ipfs(cid)
+
+        return Response(
+            file_content,
+            mimetype="application/octet-stream",
         )
 
     except Exception as error:

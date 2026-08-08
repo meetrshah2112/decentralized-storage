@@ -159,6 +159,9 @@ def api_file_list(request):
     serializer = UploadedFileSerializer(
         files,
         many=True,
+        context={
+            "request": request,
+        },
     )
 
     return Response(
@@ -285,7 +288,12 @@ def api_file_detail(request, file_id):
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    serializer = UploadedFileSerializer(uploaded_file)
+    serializer = UploadedFileSerializer(
+        uploaded_file_record,
+        context={
+            "request": request,
+        },
+    )
 
     return Response(
         {

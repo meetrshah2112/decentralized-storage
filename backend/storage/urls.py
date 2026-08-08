@@ -36,4 +36,9 @@ urlpatterns = [
         views.download_file,
         name="download_file",
     ),
+    path(
+        "files/<int:file_id>/view/",
+        views.view_file,
+        name="view_file",
+    ),
 ]
