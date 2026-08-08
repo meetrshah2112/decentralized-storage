@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from .models import UploadedFile, StorageNode
+from django.urls import reverse
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -98,12 +99,16 @@ class UploadedFileSerializer(serializers.ModelSerializer):
     file_size_mb = serializers.ReadOnlyField()
     gateway_url = serializers.ReadOnlyField()
     provider_node_name = serializers.SerializerMethodField()
+    view_url = serializers.SerializerMethodField()
+    download_url = serializers.SerializerMethodField()
 
     class Meta:
         model = UploadedFile
         fields = [
             "id",
             "original_filename",
+            "view_url",
+            "download_url",
             "cid",
             "file_size",
             "file_size_mb",
@@ -113,6 +118,36 @@ class UploadedFileSerializer(serializers.ModelSerializer):
             "provider_node_name",
             "uploaded_at",
         ]
+
+    def get_view_url(self, obj):
+        request = self.context.get("request")
+
+        url = reverse(
+            "view_file",
+            args=[
+                obj.id,
+            ],
+        )
+
+        if request:
+            return request.build_absolute_uri(url)
+
+        return url
+
+    def get_download_url(self, obj):
+        request = self.context.get("request")
+
+        url = reverse(
+            "download_file",
+            args=[
+                obj.id,
+            ],
+        )
+
+        if request:
+            return request.build_absolute_uri(url)
+
+        return url
 
     def get_provider_node_name(self, obj):
         if obj.provider_node:
@@ -156,6 +191,7 @@ class StorageNodeSerializer(serializers.ModelSerializer):
             "ipfs_status",
             "ipfs_peer_id",
             "ipfs_version",
+            "agent_api_url",
             "last_heartbeat",
             "online",
             "status",

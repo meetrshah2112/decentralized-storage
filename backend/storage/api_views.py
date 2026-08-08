@@ -1,5 +1,4 @@
 from datetime import timedelta
-
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.contrib.auth import login, logout
@@ -9,6 +8,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
+from .provider_selection import select_best_provider_node
+from .provider_agent_client import upload_file_to_provider
 
 from .ipfs_client import add_file_to_ipfs, get_file_from_ipfs
 from .models import StorageNode, UploadedFile, UserProfile
@@ -158,6 +159,9 @@ def api_file_list(request):
     serializer = UploadedFileSerializer(
         files,
         many=True,
+        context={
+            "request": request,
+        },
     )
 
     return Response(
@@ -188,7 +192,7 @@ def api_file_upload(request):
 
     uploaded_file = serializer.validated_data["file"]
 
-    provider_node = get_active_provider_node()
+    provider_node = select_best_provider_node(uploaded_file.size)
 
     if not provider_node:
         return Response(
@@ -200,12 +204,14 @@ def api_file_upload(request):
         )
 
     try:
-        ipfs_result = add_file_to_ipfs(
-            uploaded_file,
-            uploaded_file.name,
+
+        provider_result = upload_file_to_provider(
+            provider_node=provider_node,
+            file_obj=uploaded_file,
+            filename=uploaded_file.name,
         )
 
-        cid = ipfs_result["Hash"]
+        cid = provider_result["cid"]
 
         saved_file = UploadedFile.objects.create(
             owner=request.user,
@@ -247,7 +253,7 @@ def api_file_upload(request):
         return Response(
             {
                 "success": True,
-                "message": "File uploaded to IPFS successfully.",
+                "message": "File uploaded successfully to selected provider node.",
                 "file": response_serializer.data,
             },
             status=status.HTTP_201_CREATED,
@@ -282,7 +288,12 @@ def api_file_detail(request, file_id):
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    serializer = UploadedFileSerializer(uploaded_file)
+    serializer = UploadedFileSerializer(
+        uploaded_file_record,
+        context={
+            "request": request,
+        },
+    )
 
     return Response(
         {
@@ -348,6 +359,36 @@ def api_file_delete(request, file_id):
     )
 
 
+# @api_view(["POST"])
+# @permission_classes([IsAuthenticated])
+# def api_become_provider(request):
+
+#     profile = request.user.profile
+
+#     if profile.role == "provider":
+#         return Response(
+#             {
+#                 "success": True,
+#                 "message": "User is already a provider.",
+#             }
+#         )
+
+#     profile.role = "provider"
+#     profile.save(
+#         update_fields=[
+#             "role",
+#             "updated_at",
+#         ]
+#     )
+
+#     return Response(
+#         {
+#             "success": True,
+#             "message": "User upgraded to storage provider.",
+#         }
+#     )
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def api_become_provider(request):
@@ -355,10 +396,13 @@ def api_become_provider(request):
     profile = request.user.profile
 
     if profile.role == "provider":
+        serializer = UserSerializer(request.user)
+
         return Response(
             {
                 "success": True,
                 "message": "User is already a provider.",
+                "user": serializer.data,
             }
         )
 
@@ -370,10 +414,13 @@ def api_become_provider(request):
         ]
     )
 
+    serializer = UserSerializer(request.user)
+
     return Response(
         {
             "success": True,
             "message": "User upgraded to storage provider.",
+            "user": serializer.data,
         }
     )
 
@@ -402,6 +449,83 @@ def api_provider_node(request):
             "success": True,
             "node": serializer.data,
         }
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def api_provider_node_register(request):
+
+    profile = request.user.profile
+
+    if profile.role != "provider":
+        return Response(
+            {
+                "success": False,
+                "message": "Only providers can register a storage node.",
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    existing_node = StorageNode.objects.filter(
+        owner=request.user,
+    ).first()
+
+    if existing_node:
+        serializer = StorageNodeSerializer(existing_node)
+
+        return Response(
+            {
+                "success": True,
+                "message": "Storage node already exists.",
+                "node": serializer.data,
+            }
+        )
+
+    display_name = request.data.get("display_name")
+    allocated_storage_gb = request.data.get("allocated_storage_gb")
+
+    if not display_name:
+        return Response(
+            {
+                "success": False,
+                "message": "Display name is required.",
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        allocated_storage_gb = float(allocated_storage_gb)
+
+        if allocated_storage_gb <= 0:
+            raise ValueError
+
+    except (TypeError, ValueError):
+        return Response(
+            {
+                "success": False,
+                "message": "Allocated storage must be a positive number in GB.",
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    allocated_storage_bytes = int(allocated_storage_gb * 1024 * 1024 * 1024)
+
+    node = StorageNode.objects.create(
+        owner=request.user,
+        display_name=display_name,
+        allocated_storage=allocated_storage_bytes,
+    )
+
+    serializer = StorageNodeSerializer(node)
+
+    return Response(
+        {
+            "success": True,
+            "message": "Storage node registered successfully.",
+            "node": serializer.data,
+        },
+        status=status.HTTP_201_CREATED,
     )
 
 
@@ -435,6 +559,7 @@ def api_network_stats(request):
                 "offline_nodes": total_nodes - online_nodes,
                 "ipfs_connected_nodes": ipfs_connected_nodes,
                 "total_files": total_files,
+                "total_storage_used": total_storage_used,
                 "total_storage_used_bytes": total_storage_used,
                 "total_storage_used_mb": round(
                     total_storage_used / (1024 * 1024),

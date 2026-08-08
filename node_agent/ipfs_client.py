@@ -46,3 +46,42 @@ def get_version():
 
     except requests.RequestException:
         return None
+
+
+def add_file_to_ipfs(file_storage):
+    try:
+        response = requests.post(
+            f"{IPFS_API}/add",
+            files={
+                "file": (
+                    file_storage.filename,
+                    file_storage.stream,
+                )
+            },
+            timeout=120,
+        )
+
+        response.raise_for_status()
+
+        return response.json()
+
+    except requests.RequestException as error:
+        raise Exception(f"IPFS add failed: {error}")
+
+
+def get_file_from_ipfs(cid):
+    try:
+        response = requests.post(
+            f"{IPFS_API}/cat",
+            params={
+                "arg": cid,
+            },
+            timeout=120,
+        )
+
+        response.raise_for_status()
+
+        return response.content
+
+    except requests.RequestException as error:
+        raise Exception(f"IPFS cat failed: {error}")
