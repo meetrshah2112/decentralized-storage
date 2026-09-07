@@ -1,4 +1,5 @@
 from datetime import timedelta
+import uuid
 import json
 from .provider_selection import select_best_provider_node
 from .provider_agent_client import upload_file_to_provider
@@ -180,34 +181,25 @@ def home(request):
 
     return redirect("consumer_dashboard")
 
-
 @csrf_exempt
 @require_POST
 def heartbeat(request):
 
     node_uuid = request.POST.get("node_uuid")
+    node_token = request.POST.get("node_token")
 
-    try:
-        node = StorageNode.objects.get(node_uuid=node_uuid)
-
-        node.last_heartbeat = timezone.now()
-        node.is_online = True
-        node.available_storage = int(request.POST.get("available_storage", 0))
-        node.total_storage = int(request.POST.get("total_storage", 0))
-        node.operating_system = request.POST.get("operating_system", "")
-        node.agent_version = request.POST.get("agent_version", "0.1.0")
-        node.ipfs_status = request.POST.get("ipfs_status") == "True"
-        node.ipfs_peer_id = request.POST.get("ipfs_peer_id", "")
-        node.ipfs_version = request.POST.get("ipfs_version", "")
-        node.agent_api_url = request.POST.get("agent_api_url", "")
-
-        node.save()
-
+    if not node_token:
         return JsonResponse(
             {
-                "success": True,
-                "message": "Heartbeat received.",
-            }
+                "success": False,
+                "message": "Node token is required.",
+            },
+            status=401,
+        )
+
+    try:
+        node = StorageNode.objects.get(
+            node_token=node_token,
         )
 
     except StorageNode.DoesNotExist:
@@ -215,11 +207,106 @@ def heartbeat(request):
         return JsonResponse(
             {
                 "success": False,
-                "message": "Node not found.",
+                "message": "Invalid node token.",
             },
-            status=404,
+            status=401,
         )
 
+    # The token identifies the registered node.
+    # The UUID comes from the Node Agent and is stored automatically.
+    if node_uuid:
+        try:
+            incoming_uuid = uuid.UUID(node_uuid)
+
+            # Protect against another machine attempting to use
+            # an already-paired node token.
+            if node.node_uuid != incoming_uuid:
+
+                existing_node = StorageNode.objects.filter(
+                    node_uuid=incoming_uuid,
+                ).exclude(
+                    id=node.id,
+                ).exists()
+
+                if existing_node:
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "message": "This node UUID is already registered to another node.",
+                        },
+                        status=409,
+                    )
+
+                node.node_uuid = incoming_uuid
+
+        except (ValueError, AttributeError):
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Invalid node UUID.",
+                },
+                status=400,
+            )
+
+    node.last_heartbeat = timezone.now()
+    node.is_online = True
+
+    node.available_storage = int(
+        request.POST.get(
+            "available_storage",
+            0,
+        )
+    )
+
+    node.total_storage = int(
+        request.POST.get(
+            "total_storage",
+            0,
+        )
+    )
+
+    node.operating_system = request.POST.get(
+        "operating_system",
+        "",
+    )
+
+    node.agent_version = request.POST.get(
+        "agent_version",
+        "0.1.0",
+    )
+
+    node.ipfs_status = (
+        request.POST.get("ipfs_status") == "True"
+    )
+
+    node.ipfs_peer_id = request.POST.get(
+        "ipfs_peer_id",
+        "",
+    )
+
+    node.ipfs_version = request.POST.get(
+        "ipfs_version",
+        "",
+    )
+
+    node.agent_api_url = request.POST.get(
+        "agent_api_url",
+        "",
+    )
+
+    node.status = "active"
+
+    node.save()
+
+    return JsonResponse(
+        {
+            "success": True,
+            "message": "Heartbeat received.",
+            "node_uuid": str(node.node_uuid),
+            "agent_api_url": node.agent_api_url,
+        }
+    )
 
 @login_required
 def consumer_dashboard(request):
@@ -340,7 +427,10 @@ def register_storage_node(request):
             node.owner = request.user
             node.save()
 
-            messages.success(request, "Storage node registered successfully.")
+            messages.success(
+            request,
+            "Storage node registered successfully.",
+            )
 
             return redirect("provider_dashboard")
 

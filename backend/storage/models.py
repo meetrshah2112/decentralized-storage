@@ -1,8 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
-import uuid
 from datetime import timedelta
+import uuid
+import secrets
 
 
 class UserProfile(models.Model):
@@ -39,6 +40,8 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"{self.user.username} ({self.role})"
 
+def generate_node_token():
+    return secrets.token_urlsafe(32)
 
 class StorageNode(models.Model):
 
@@ -66,6 +69,13 @@ class StorageNode(models.Model):
         unique=True,
     )
 
+    node_token = models.CharField(
+    max_length=128,
+    unique=True,
+    editable=False,
+    default=generate_node_token,
+    )
+
     allocated_storage = models.BigIntegerField(
         default=0,
     )
@@ -83,9 +93,13 @@ class StorageNode(models.Model):
         default=False,
     )
 
-    available_storage = models.BigIntegerField(default=0)
+    available_storage = models.BigIntegerField(
+        default=0,
+    )
 
-    total_storage = models.BigIntegerField(default=0)
+    total_storage = models.BigIntegerField(
+        default=0,
+    )
 
     operating_system = models.CharField(
         max_length=100,
@@ -97,7 +111,9 @@ class StorageNode(models.Model):
         default="0.1.0",
     )
 
-    ipfs_status = models.BooleanField(default=False)
+    ipfs_status = models.BooleanField(
+        default=False,
+    )
 
     ipfs_peer_id = models.CharField(
         max_length=100,

@@ -427,7 +427,8 @@ def api_become_provider(request):
 def api_provider_node(request):
 
     node = StorageNode.objects.filter(
-        owner=request.user,
+    node_uuid=node_uuid,
+    node_token=node_token,
     ).first()
 
     if not node:
