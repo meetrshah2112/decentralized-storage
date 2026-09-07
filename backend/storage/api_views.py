@@ -1,7 +1,6 @@
 from datetime import timedelta
 from django.contrib.auth.models import User
 from django.utils import timezone
-from django.contrib.auth import login, logout
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework import status
@@ -78,11 +77,6 @@ def api_login(request):
 
     user = serializer.validated_data["user"]
 
-    login(
-        request,
-        user,
-    )
-
     token, created = Token.objects.get_or_create(
         user=user,
     )
@@ -106,8 +100,6 @@ def api_logout(request):
     Token.objects.filter(
         user=request.user,
     ).delete()
-
-    logout(request)
 
     return Response(
         {
@@ -248,7 +240,12 @@ def api_file_upload(request):
             ]
         )
 
-        response_serializer = UploadedFileSerializer(saved_file)
+        response_serializer = UploadedFileSerializer(
+            saved_file,
+            context={
+                "request": request,
+            },
+        )
 
         return Response(
             {
@@ -289,7 +286,7 @@ def api_file_detail(request, file_id):
         )
 
     serializer = UploadedFileSerializer(
-        uploaded_file_record,
+        uploaded_file,
         context={
             "request": request,
         },

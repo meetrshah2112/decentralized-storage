@@ -238,4 +238,7 @@ class UploadedFile(models.Model):
 
     @property
     def gateway_url(self):
-        return f"http://127.0.0.1:8080/ipfs/{self.cid}"
+        return None
+    
+    
+    
