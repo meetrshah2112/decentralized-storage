@@ -1,4 +1,5 @@
 from datetime import timedelta
+import io
 import uuid
 import json
 from .provider_selection import select_best_provider_node
@@ -15,8 +16,11 @@ from django.views.decorators.http import require_POST
 from django.db import transaction
 from django.db.models import F
 from .provider_agent_client import upload_file_to_provider, download_file_from_provider
-
-
+from .encryption import (
+    encrypt_file,
+    protect_file_key,
+    decrypt_file,
+)
 from .forms import (
     RegistrationForm,
     StorageNodeForm,
@@ -39,6 +43,53 @@ class CustomLoginView(LoginView):
         return reverse_lazy("consumer_dashboard")
 
 
+# @login_required
+# def download_file(request, file_id):
+#     uploaded_file = get_object_or_404(
+#         UploadedFile,
+#         id=file_id,
+#         owner=request.user,
+#     )
+
+#     if not uploaded_file.provider_node:
+#         messages.error(
+#             request,
+#             "Provider node information is missing for this file.",
+#         )
+#         return redirect("consumer_dashboard")
+
+#     try:
+#         file_content = download_file_from_provider(
+#         provider_node=uploaded_file.provider_node,
+#         cid=uploaded_file.cid,
+#         )
+
+#         if uploaded_file.is_encrypted:
+#             file_content = decrypt_file(
+#                 encrypted_data=file_content,
+#                 encrypted_key=uploaded_file.encrypted_key,
+#                 key_nonce=uploaded_file.key_nonce,
+#                 file_nonce=uploaded_file.file_nonce,
+#             )
+
+#         response = HttpResponse(
+#             file_content,
+#             content_type=uploaded_file.content_type or "application/octet-stream",
+#         )
+
+#         response["Content-Disposition"] = (
+#             f'attachment; filename="{uploaded_file.original_filename}"'
+#         )
+
+#         return response
+
+#     except Exception as error:
+#         messages.error(
+#             request,
+#             f"File download failed: {error}",
+#         )
+#         return redirect("consumer_dashboard")
+
 @login_required
 def download_file(request, file_id):
     uploaded_file = get_object_or_404(
@@ -60,6 +111,14 @@ def download_file(request, file_id):
             cid=uploaded_file.cid,
         )
 
+        if uploaded_file.is_encrypted:
+            file_content = decrypt_file(
+                encrypted_data=file_content,
+                encrypted_key=uploaded_file.encrypted_key,
+                key_nonce=uploaded_file.key_nonce,
+                file_nonce=uploaded_file.file_nonce,
+            )
+
         response = HttpResponse(
             file_content,
             content_type=uploaded_file.content_type or "application/octet-stream",
@@ -77,6 +136,7 @@ def download_file(request, file_id):
             f"File download failed: {error}",
         )
         return redirect("consumer_dashboard")
+
 
 
 @login_required
@@ -99,6 +159,14 @@ def view_file(request, file_id):
             provider_node=uploaded_file.provider_node,
             cid=uploaded_file.cid,
         )
+
+        if uploaded_file.is_encrypted:
+            file_content = decrypt_file(
+                encrypted_data=file_content,
+                encrypted_key=uploaded_file.encrypted_key,
+                key_nonce=uploaded_file.key_nonce,
+                file_nonce=uploaded_file.file_nonce,
+            )
 
         response = HttpResponse(
             file_content,
@@ -327,10 +395,32 @@ def consumer_dashboard(request):
                 return redirect("consumer_dashboard")
 
             try:
-                # 3. Perform IPFS Upload using the locked provider node
+
+                # 3. Upload file to provider node
+                # Read original file
+                original_data = uploaded_file.read()
+
+                # Encrypt the file using AES-256-GCM
+                encrypted_data, file_key, file_nonce = encrypt_file(
+                    original_data
+                )
+
+                # Protect the file-specific encryption key
+                encrypted_key, key_nonce = protect_file_key(
+                    file_key
+                )
+
+                # Convert encrypted data into a file-like object
+                encrypted_file = io.BytesIO(
+                    encrypted_data
+                )
+
+                encrypted_file.name = uploaded_file.name
+
+                # Upload ONLY encrypted data to provider
                 provider_result = upload_file_to_provider(
                     provider_node=provider_node,
-                    file_obj=uploaded_file,
+                    file_obj=encrypted_file,
                     filename=uploaded_file.name,
                 )
 
@@ -346,6 +436,10 @@ def consumer_dashboard(request):
                         cid=cid,
                         file_size=uploaded_file.size,
                         content_type=uploaded_file.content_type or "",
+                        encrypted_key=encrypted_key,
+                        key_nonce=key_nonce,
+                        file_nonce=file_nonce,
+                        is_encrypted=True,
                     )
 
                     profile = request.user.profile
