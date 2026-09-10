@@ -1,9 +1,18 @@
-from rest_framework import serializers
-from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
-from .models import UploadedFile, StorageNode
+from django.contrib.auth.models import User
 from django.urls import reverse
 
+from rest_framework import serializers
+
+from .models import (
+    UploadedFile,
+    StorageNode,
+)
+
+
+# ============================================================
+# USER
+# ============================================================
 
 class UserSerializer(serializers.ModelSerializer):
 
@@ -13,7 +22,9 @@ class UserSerializer(serializers.ModelSerializer):
     reputation = serializers.SerializerMethodField()
 
     class Meta:
+
         model = User
+
         fields = [
             "id",
             "username",
@@ -25,47 +36,91 @@ class UserSerializer(serializers.ModelSerializer):
         ]
 
     def get_role(self, obj):
+
         return obj.profile.role
 
     def get_storage_used(self, obj):
+
         return obj.profile.storage_used
 
     def get_storage_contributed(self, obj):
+
         return obj.profile.storage_contributed
 
     def get_reputation(self, obj):
+
         return obj.profile.reputation
 
+
+# ============================================================
+# REGISTER
+# ============================================================
 
 class RegisterSerializer(serializers.Serializer):
 
     username = serializers.CharField()
+
     email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
-    password2 = serializers.CharField(write_only=True)
+
+    password = serializers.CharField(
+        write_only=True
+    )
+
+    password2 = serializers.CharField(
+        write_only=True
+    )
 
     def validate_username(self, value):
-        if User.objects.filter(username__iexact=value).exists():
-            raise serializers.ValidationError("Username already exists.")
+
+        if User.objects.filter(
+            username__iexact=value
+        ).exists():
+
+            raise serializers.ValidationError(
+                "Username already exists."
+            )
+
         return value
 
     def validate_email(self, value):
-        if User.objects.filter(email__iexact=value).exists():
-            raise serializers.ValidationError("Email already exists.")
+
+        if User.objects.filter(
+            email__iexact=value
+        ).exists():
+
+            raise serializers.ValidationError(
+                "Email already exists."
+            )
+
         return value
 
     def validate(self, data):
+
         if data["password"] != data["password2"]:
-            raise serializers.ValidationError({"password": "Passwords do not match."})
+
+            raise serializers.ValidationError(
+                {
+                    "password": (
+                        "Passwords do not match."
+                    )
+                }
+            )
 
         if len(data["password"]) < 8:
+
             raise serializers.ValidationError(
-                {"password": "Password must be at least 8 characters long."}
+                {
+                    "password": (
+                        "Password must be at least "
+                        "8 characters long."
+                    )
+                }
             )
 
         return data
 
     def create(self, validated_data):
+
         user = User.objects.create_user(
             username=validated_data["username"],
             email=validated_data["email"],
@@ -75,35 +130,60 @@ class RegisterSerializer(serializers.Serializer):
         return user
 
 
+# ============================================================
+# LOGIN
+# ============================================================
+
 class LoginSerializer(serializers.Serializer):
 
     username = serializers.CharField()
-    password = serializers.CharField(write_only=True)
+
+    password = serializers.CharField(
+        write_only=True
+    )
 
     def validate(self, data):
+
         user = authenticate(
             username=data["username"],
             password=data["password"],
         )
 
         if not user:
-            raise serializers.ValidationError("Invalid username or password.")
+
+            raise serializers.ValidationError(
+                "Invalid username or password."
+            )
 
         data["user"] = user
 
         return data
 
 
-class UploadedFileSerializer(serializers.ModelSerializer):
+# ============================================================
+# UPLOADED FILE
+# ============================================================
+
+class UploadedFileSerializer(
+    serializers.ModelSerializer
+):
 
     file_size_mb = serializers.ReadOnlyField()
+
     gateway_url = serializers.ReadOnlyField()
-    provider_node_name = serializers.SerializerMethodField()
+
+    provider_node_name = (
+        serializers.SerializerMethodField()
+    )
+
     view_url = serializers.SerializerMethodField()
+
     download_url = serializers.SerializerMethodField()
 
     class Meta:
+
         model = UploadedFile
+
         fields = [
             "id",
             "original_filename",
@@ -120,58 +200,105 @@ class UploadedFileSerializer(serializers.ModelSerializer):
         ]
 
     def get_view_url(self, obj):
-        request = self.context.get("request")
+
+        request = self.context.get(
+            "request"
+        )
 
         url = reverse(
-            "view_file",
+            "api_file_view",
             args=[
                 obj.id,
             ],
         )
 
         if request:
-            return request.build_absolute_uri(url)
+
+            return request.build_absolute_uri(
+                url
+            )
 
         return url
 
     def get_download_url(self, obj):
-        request = self.context.get("request")
+
+        request = self.context.get(
+            "request"
+        )
 
         url = reverse(
-            "download_file",
+            "api_file_download",
             args=[
                 obj.id,
             ],
         )
 
         if request:
-            return request.build_absolute_uri(url)
+
+            return request.build_absolute_uri(
+                url
+            )
 
         return url
 
     def get_provider_node_name(self, obj):
+
         if obj.provider_node:
+
             return obj.provider_node.display_name
+
         return None
 
 
-class FileUploadSerializer(serializers.Serializer):
+# ============================================================
+# FILE UPLOAD
+# ============================================================
+
+class FileUploadSerializer(
+    serializers.Serializer
+):
 
     file = serializers.FileField()
 
 
-class StorageNodeSerializer(serializers.ModelSerializer):
+# ============================================================
+# STORAGE NODE
+# ============================================================
+
+class StorageNodeSerializer(
+    serializers.ModelSerializer
+):
 
     online = serializers.ReadOnlyField()
-    available_storage_gb = serializers.ReadOnlyField()
-    total_storage_gb = serializers.ReadOnlyField()
-    allocated_storage_gb = serializers.ReadOnlyField()
-    storage_used_gb = serializers.ReadOnlyField()
-    storage_used_display = serializers.ReadOnlyField()
-    owner_username = serializers.SerializerMethodField()
+
+    available_storage_gb = (
+        serializers.ReadOnlyField()
+    )
+
+    total_storage_gb = (
+        serializers.ReadOnlyField()
+    )
+
+    allocated_storage_gb = (
+        serializers.ReadOnlyField()
+    )
+
+    storage_used_gb = (
+        serializers.ReadOnlyField()
+    )
+
+    storage_used_display = (
+        serializers.ReadOnlyField()
+    )
+
+    owner_username = (
+        serializers.SerializerMethodField()
+    )
 
     class Meta:
+
         model = StorageNode
+
         fields = [
             "id",
             "owner_username",
@@ -200,4 +327,5 @@ class StorageNodeSerializer(serializers.ModelSerializer):
         ]
 
     def get_owner_username(self, obj):
+
         return obj.owner.username
