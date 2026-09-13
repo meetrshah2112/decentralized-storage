@@ -8,7 +8,8 @@ db.sqlite3
 media/
 staticfiles/
 
-# Virtual Environment
+# Virtual Environment\
+node_identity.json
 venv/
 env/
 .venv/

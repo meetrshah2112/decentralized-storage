@@ -1,53 +1,226 @@
 # Decentralized Storage System
 
-A decentralized storage platform using Django, IPFS, and a provider node agent.
+A decentralized storage platform built with **Django, IPFS/Kubo, and a provider-side Node Agent**.
 
-This project allows users to upload files to IPFS, store the returned CID in Django, view/download files using IPFS, and register storage provider nodes that report live system and IPFS status through a Node Agent.
+The system separates the **control plane** from the **storage layer**. Django manages users, file metadata, provider nodes, scheduling, and APIs, while each provider computer runs a Node Agent that communicates with its local IPFS/Kubo instance.
+
+The current implementation is designed for **PC-to-PC storage over a local network (LAN)** and can later be extended to multiple provider nodes and production deployment.
+
+---
+
+## Architecture
+
+```text
+                         DECENTRALIZED STORAGE SYSTEM
+
+        Consumer / Client PC
+                |
+                v
+        +-------------------+
+        | Django Backend    |
+        | Control Plane     |
+        | Port 8000         |
+        +---------+---------+
+                  |
+                  | HTTP
+                  v
+        +-------------------+
+        | Provider Node     |
+        | Node Agent        |
+        | Port 9001         |
+        +---------+---------+
+                  |
+                  | Local HTTP API
+                  v
+        +-------------------+
+        | Kubo / IPFS       |
+        | API Port 5001     |
+        | Gateway Port 8080 |
+        +-------------------+
+```
+
+### Main responsibilities
+
+| Component | Responsibility |
+|---|---|
+| Django | Authentication, dashboards, metadata, provider selection, REST API, node monitoring |
+| Node Agent | Provider-side bridge between Django and local IPFS, heartbeat, system information |
+| Kubo / IPFS | Stores file content and returns CIDs |
+| SQLite | Development database for users, files, and provider-node metadata |
 
 ---
 
 ## Current Features
 
+### Authentication and users
+
 - User registration and login
-- Role-based dashboards
-  - Consumer Dashboard
-  - Provider Dashboard
-- Become a Storage Provider flow
-- Provider storage node registration
-- Node Agent heartbeat system
-- Live provider node status
-- Live IPFS connection status
-- IPFS peer ID and version tracking
-- File upload to IPFS
-- CID storage in Django database
-- File view through IPFS gateway
-- File download through Django
-- Provider storage usage tracking
+- Logout
+- Automatic `UserProfile` creation
+- Consumer and provider roles
+- Role-based dashboard routing
+- Token authentication for REST APIs
 
----
+### Consumer features
 
-## Tech Stack
+- Consumer dashboard
+- Upload files
+- View file metadata
+- Download files
+- Delete file records
+- Storage usage tracking
+- File ownership protection
 
-### Backend
+### Provider features
 
-- Python 3.11
-- Django 5.2
-- SQLite
-- Bootstrap
-- Requests
+- Become a storage provider
+- Provider dashboard
+- Register a storage node
+- Configure allocated storage
+- Track storage usage
+- View node operating-system information
+- View total and available disk space
+- View IPFS status
+- View IPFS peer ID
+- View IPFS version
+- View Node Agent URL
+- Live heartbeat/online status
 
-### Decentralized Storage
+### Intelligent provider selection
 
-- IPFS / Kubo
-- Local IPFS daemon
-- IPFS HTTP API
+Django automatically selects an eligible provider node for an uploaded file.
+
+A provider must:
+
+- Have a recent heartbeat
+- Have IPFS available
+- Have a registered Node Agent URL
+- Have enough allocated storage remaining
+- Have enough physical available storage
+
+The current provider score considers:
+
+```text
+40%  available physical storage
+35%  remaining allocated storage
+15%  provider reputation
+-10% current storage load
+```
+
+The highest-scoring eligible provider is selected.
 
 ### Node Agent
 
-- Python
-- Requests
-- python-dotenv
-- psutil
+The Node Agent currently provides:
+
+- Background heartbeat service
+- Automatic LAN IP detection
+- Local IPFS health checks
+- IPFS peer ID detection
+- IPFS version detection
+- Provider-side file upload endpoint
+- Provider-side file download endpoint
+- Local system and storage information
+
+### Automatic Node Identity
+
+The Node Agent no longer needs a manually entered UUID.
+
+On first startup it generates a UUID and stores it locally in:
+
+```text
+node_agent/node_identity.json
+```
+
+Example:
+
+```json
+{
+    "node_uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+}
+```
+
+On future restarts, the same UUID is reused.
+
+The provider node is paired with Django using a **Node Token**. The token is stored in the provider's `.env`, while the machine UUID is managed automatically by the Node Agent.
+
+This produces the following identity flow:
+
+```text
+First startup
+    |
+    +--> Generate UUID
+    |
+    +--> Save node_identity.json
+    |
+    +--> Send UUID + Node Token + Agent URL
+    |
+    +--> Django identifies the registered StorageNode
+
+Future startup
+    |
+    +--> Read existing UUID
+    |
+    +--> Reuse same UUID
+    |
+    +--> Continue heartbeat
+```
+
+---
+
+## File Upload Flow
+
+The current upload architecture is provider-node based.
+
+```text
+Consumer
+   |
+   v
+Django Backend
+   |
+   | select_best_provider_node()
+   v
+Selected Provider Node Agent
+   |
+   v
+Provider's local Kubo / IPFS
+   |
+   v
+CID returned
+   |
+   v
+Django stores file metadata + CID + provider node
+```
+
+Django does **not** need direct access to the provider's local IPFS API. The Node Agent acts as the provider-side bridge.
+
+---
+
+## File Download Flow
+
+```text
+Consumer
+   |
+   v
+Django
+   |
+   v
+Provider Node Agent
+   |
+   v
+Provider Kubo / IPFS
+   |
+   v
+File content
+   |
+   v
+Django
+   |
+   v
+Consumer
+```
+
+This allows the provider's IPFS daemon to remain local to the provider computer.
 
 ---
 
@@ -59,20 +232,32 @@ DecentralizedStorage/
 │   ├── manage.py
 │   ├── config/
 │   ├── storage/
+│   │   ├── models.py
+│   │   ├── views.py
+│   │   ├── api_views.py
+│   │   ├── serializers.py
+│   │   ├── forms.py
+│   │   ├── provider_selection.py
+│   │   ├── provider_agent_client.py
+│   │   ├── ipfs_client.py
+│   │   ├── urls.py
+│   │   ├── api_urls.py
+│   │   └── migrations/
 │   ├── templates/
 │   ├── static/
 │   ├── media/
-│   ├── requirements.txt
-│   └── venv/
+│   └── requirements.txt
 │
 ├── node_agent/
 │   ├── agent.py
 │   ├── config.py
 │   ├── heartbeat.py
 │   ├── ipfs_client.py
+│   ├── upload_server.py
 │   ├── utils.py
 │   ├── requirements.txt
-│   └── .env.example
+│   ├── .env
+│   └── node_identity.json
 │
 ├── frontend/
 ├── docs/
@@ -84,275 +269,447 @@ DecentralizedStorage/
 
 ## Requirements
 
-Before running the project, install:
+For the current PC-to-PC implementation:
 
+- Windows 10/11 or another supported desktop OS
 - Python 3.11+
 - Git
+- Django 5.2.x
 - IPFS Kubo
-- VS Code or any code editor
+- Internet/network connectivity for LAN testing
+- VS Code or another code editor
 
-Check Python:
+Check installations:
 
 ```powershell
 python --version
-```
-
-Check Git:
-
-```powershell
 git --version
-```
-
-Check IPFS:
-
-```powershell
 ipfs version
 ```
 
 ---
 
-## Setup Instructions
+# Backend Setup
 
-### 1. Clone the Repository
+## 1. Clone the repository
 
 ```powershell
 git clone https://github.com/YOUR_USERNAME/decentralized-storage.git
 cd decentralized-storage
 ```
 
----
-
-## Backend Setup
-
-### 2. Create Backend Virtual Environment
+## 2. Create the backend virtual environment
 
 ```powershell
 cd backend
-
 python -m venv venv
-
 .\venv\Scripts\activate
 ```
 
----
-
-### 3. Install Backend Dependencies
+## 3. Install dependencies
 
 ```powershell
 pip install -r requirements.txt
 ```
 
----
-
-### 4. Run Database Migrations
+## 4. Create/update database tables
 
 ```powershell
+python manage.py makemigrations
 python manage.py migrate
 ```
 
----
+## 5. Check the Django project
 
-### 5. Start Django Backend
+```powershell
+python manage.py check
+```
+
+Expected:
+
+```text
+System check identified no issues (0 silenced).
+```
+
+## 6. Start Django
+
+For local testing:
 
 ```powershell
 python manage.py runserver
 ```
 
-Backend will run at:
+For PC-to-PC LAN testing:
+
+```powershell
+python manage.py runserver 0.0.0.0:8000
+```
+
+Find the backend PC's LAN IP with:
+
+```powershell
+ipconfig
+```
+
+Example:
 
 ```text
-http://127.0.0.1:8000/
+192.168.0.102
+```
+
+The provider laptop will then use:
+
+```text
+http://192.168.0.102:8000
 ```
 
 ---
 
-## IPFS Setup
+# IPFS / Kubo Setup
 
-### 6. Initialize IPFS
+## 1. Initialize IPFS
 
-Run this only once:
+Run once per provider machine:
 
 ```powershell
 ipfs init
 ```
 
-If IPFS is already initialized, skip this step.
+If the node has already been initialized, skip this step.
 
----
+## 2. Start the IPFS daemon
 
-### 7. Start IPFS Daemon
-
-Open a new terminal and run:
+Open another terminal:
 
 ```powershell
 ipfs daemon
 ```
 
-You should see:
+Wait for:
 
 ```text
 Daemon is ready
 ```
 
-IPFS services:
+Default services:
 
 ```text
-IPFS API:     http://127.0.0.1:5001
-IPFS Web UI:  http://127.0.0.1:5001/webui
-IPFS Gateway: http://127.0.0.1:8080
+IPFS API:      http://127.0.0.1:5001
+IPFS Web UI:   http://127.0.0.1:5001/webui
+IPFS Gateway:  http://127.0.0.1:8080
 ```
 
-Keep this terminal running.
+Keep the daemon running while the Node Agent is running.
 
 ---
 
-## Node Agent Setup
+# Provider Node Agent Setup
 
-The Node Agent runs on the provider machine. It sends heartbeat, storage information, and IPFS status to Django.
+The Node Agent runs on the **provider computer**.
 
-### 8. Setup Node Agent Virtual Environment
-
-Open a new terminal:
+## 1. Create the Node Agent virtual environment
 
 ```powershell
 cd node_agent
-
 python -m venv venv
-
 .\venv\Scripts\activate
 ```
 
----
-
-### 9. Install Node Agent Dependencies
+## 2. Install dependencies
 
 ```powershell
 pip install -r requirements.txt
 ```
 
----
+## 3. Register a storage node in Django
 
-### 10. Create Node Agent `.env`
-
-Inside `node_agent/`, create a file named:
+Using the Provider Dashboard or REST API:
 
 ```text
-.env
+Become Provider
+        ↓
+Register Storage Node
+        ↓
+Set display name
+        ↓
+Set allocated storage
 ```
 
-Add:
+Django creates the storage node and generates its unique **Node Token**.
+
+The Node UUID is managed automatically by the Node Agent and does not need to be copied into `.env`.
+
+---
+
+## 4. Create the Node Agent `.env`
+
+Create:
+
+```text
+node_agent/.env
+```
+
+For testing on the same computer as Django:
 
 ```env
 BACKEND_URL=http://127.0.0.1:8000
-NODE_UUID=PASTE_PROVIDER_NODE_UUID_HERE
-HEARTBEAT_INTERVAL=5
+NODE_TOKEN=PASTE_NODE_TOKEN_HERE
+HEARTBEAT_INTERVAL=30
+AGENT_HOST=0.0.0.0
+AGENT_PORT=9001
 ```
 
-Important:
+For the final PC-to-PC test, replace `127.0.0.1` with the **Django laptop's LAN IP**:
 
-- `NODE_UUID` is generated after registering a storage node from the Provider Dashboard.
-- Copy the UUID from the Provider Dashboard and paste it into `.env`.
-- Restart the Node Agent after changing `.env`.
+```env
+BACKEND_URL=http://192.168.0.102:8000
+NODE_TOKEN=PASTE_NODE_TOKEN_HERE
+HEARTBEAT_INTERVAL=30
+AGENT_HOST=0.0.0.0
+AGENT_PORT=9001
+```
+
+### Important
+
+Do **not** add:
+
+```env
+NODE_UUID=...
+```
+
+The Node Agent generates and persists the UUID automatically.
+
+---
+
+## 5. Start the Node Agent
+
+```powershell
+python agent.py
+```
+
+Typical output includes:
+
+```text
+==================================================
+Decentralized Storage Node Agent
+==================================================
+Heartbeat every 30 seconds
+Agent API URL : http://192.168.0.xxx:9001
+IPFS Running  : True
+Peer ID       : 12D3Koo...
+IPFS Version  : 0.42.0
+```
+
+Heartbeat output should also show:
+
+```text
+Sending heartbeat
+Node UUID     : xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+Agent URL     : http://192.168.0.xxx:9001
+Backend       : http://192.168.0.102:8000
+Status Code   : 200
+```
+
+---
+
+# PC-to-PC Setup
+
+The intended distributed test uses two computers on the same LAN.
+
+### Laptop 1 — Consumer / Backend
+
+Runs:
+
+```text
+Django
+Port 8000
+```
 
 Example:
 
+```text
+192.168.0.102
+```
+
+Start with:
+
+```powershell
+python manage.py runserver 0.0.0.0:8000
+```
+
+### Laptop 2 — Provider
+
+Runs:
+
+```text
+Kubo / IPFS
+Node Agent
+Port 9001
+```
+
+The Node Agent automatically detects the provider laptop's LAN IP and reports its URL to Django.
+
+Example:
+
+```text
+http://192.168.0.103:9001
+```
+
+The provider `.env` should point to Laptop 1:
+
 ```env
-BACKEND_URL=http://127.0.0.1:8000
-NODE_UUID=ca4bf2bd-5c24-46be-af1b-5ac132f9a83b
-HEARTBEAT_INTERVAL=5
+BACKEND_URL=http://192.168.0.102:8000
 ```
 
 ---
 
-### 11. Start Node Agent
+# Recommended PC-to-PC Testing Order
+
+## 1. Verify Django
+
+On Laptop 1:
 
 ```powershell
-python agent.py
+python manage.py check
 ```
 
-Expected output:
+## 2. Verify network connectivity
+
+From Laptop 1:
+
+```powershell
+Test-NetConnection 192.168.0.103 -Port 9001
+```
+
+Expected:
 
 ```text
-Decentralized Storage Node Agent
-Heartbeat every 5 seconds
-IPFS Running : True
-Peer ID      : 12D3Koo...
-IPFS Version : 0.42.0
-Status Code : 200
+TcpTestSucceeded : True
 ```
 
----
+## 3. Verify Node Agent
 
-## How to Use the Application
-
-### Consumer Flow
-
-1. Register a new user.
-2. Login.
-3. Open Consumer Dashboard.
-4. Upload a file.
-5. Django sends the file to IPFS.
-6. IPFS returns a CID.
-7. Django stores the CID.
-8. User can view or download the file.
-
-Consumer Dashboard:
+Open from Laptop 1:
 
 ```text
-http://127.0.0.1:8000/consumer/dashboard/
+http://192.168.0.103:9001/health/
 ```
+
+## 4. Verify heartbeat
+
+Check the provider dashboard and confirm:
+
+- Node is online
+- IPFS is connected
+- Agent URL is present
+- IPFS peer ID is present
+- IPFS version is present
+- Storage values are updated
+
+## 5. Verify provider upload
+
+Upload a small test file through the Node Agent or Django application.
+
+## 6. Verify CID on the provider computer
+
+```powershell
+ipfs pin ls
+ipfs cat <CID>
+```
+
+## 7. Verify application download
+
+Download the same file through Django and confirm the content matches.
 
 ---
 
-### Provider Flow
+# Node Agent API
 
-1. Register or login as a user.
-2. Open Consumer Dashboard.
-3. Click **Become Provider**.
-4. Register a storage node.
-5. Copy the generated Node UUID.
-6. Paste it into `node_agent/.env`.
-7. Start IPFS daemon.
-8. Start Node Agent.
-9. Open Provider Dashboard.
+The provider Node Agent currently exposes these endpoints.
 
-Provider Dashboard:
+## Health
+
+```http
+GET /health/
+```
+
+Returns Node Agent and IPFS status.
+
+## Upload
+
+```http
+POST /upload/
+```
+
+Form-data:
 
 ```text
-http://127.0.0.1:8000/provider/dashboard/
+file=<file>
+```
+
+The Node Agent uploads the file to its local Kubo instance and returns the CID.
+
+## Download
+
+```http
+GET /download/?cid=<CID>
+```
+
+The Node Agent retrieves the file from local IPFS.
+
+---
+
+# Django REST API
+
+Base path:
+
+```text
+/api/
+```
+
+## Authentication
+
+```http
+POST /api/auth/register/
+POST /api/auth/login/
+POST /api/auth/logout/
+GET  /api/auth/me/
+```
+
+## Files
+
+```http
+GET    /api/files/
+POST   /api/files/upload/
+GET    /api/files/<id>/
+DELETE /api/files/<id>/delete/
+```
+
+## Provider
+
+```http
+POST /api/become-provider/
+GET  /api/provider/node/
+POST /api/provider/node/register/
+```
+
+## Network
+
+```http
+GET /api/network/stats/
+```
+
+## Admin
+
+```http
+GET /api/admin/stats/
 ```
 
 ---
 
-## Running the Full System
+# Important Application URLs
 
-To run the complete project, open 3 terminals.
-
-### Terminal 1: IPFS
-
-```powershell
-ipfs daemon
-```
-
-### Terminal 2: Django Backend
-
-```powershell
-cd backend
-.\venv\Scripts\activate
-python manage.py runserver
-```
-
-### Terminal 3: Node Agent
-
-```powershell
-cd node_agent
-.\venv\Scripts\activate
-python agent.py
-```
-
----
-
-## Important URLs
+Local development:
 
 ```text
 Home:
@@ -364,6 +721,9 @@ http://127.0.0.1:8000/consumer/dashboard/
 Provider Dashboard:
 http://127.0.0.1:8000/provider/dashboard/
 
+Register Storage Node:
+http://127.0.0.1:8000/provider/register-node/
+
 IPFS Web UI:
 http://127.0.0.1:5001/webui
 
@@ -371,130 +731,221 @@ IPFS Gateway:
 http://127.0.0.1:8080/ipfs/<CID>
 ```
 
+During PC-to-PC testing, use the Django laptop's LAN IP instead of `127.0.0.1` for URLs accessed from the provider laptop.
+
 ---
 
-## Current Internal API Endpoints
+# Node Identity and Pairing
 
-These endpoints are currently used internally.
+Each provider computer has two important identifiers:
 
-### Node Agent Heartbeat
+### Node UUID
 
-```http
-POST /api/heartbeat/
-```
-
-Used by the Node Agent to send:
+Generated automatically by the Node Agent:
 
 ```text
-node_uuid
-available_storage
-total_storage
-operating_system
-agent_version
-ipfs_status
-ipfs_peer_id
-ipfs_version
+node_agent/node_identity.json
 ```
 
----
+It remains stable across Node Agent restarts on the same installation.
 
-### File Download
+### Node Token
 
-```http
-GET /files/<file_id>/download/
-```
+Generated by Django when the storage node is registered.
 
-Downloads a file from IPFS through Django.
+The token is used to pair the Node Agent with the correct Django `StorageNode`.
 
----
-
-## REST API Plan
-
-REST API support will be added for frontend development.
-
-Planned endpoints:
-
-```http
-GET     /api/files/
-POST    /api/files/upload/
-GET     /api/files/<id>/
-DELETE  /api/files/<id>/
-
-GET     /api/provider/node/
-POST    /api/provider/register-node/
-POST    /api/become-provider/
-
-GET     /api/network/nodes/
-```
-
-The project will support both:
+### Identity flow
 
 ```text
-1. Server-side rendered Django HTML pages
-2. REST API endpoints for frontend/mobile clients
+Provider registers node
+          |
+          v
+Django generates Node Token
+          |
+          v
+Provider places token in .env
+          |
+          v
+Node Agent starts
+          |
+          v
+Node Agent generates/loads UUID
+          |
+          v
+Heartbeat sends UUID + Token + Agent URL
+          |
+          v
+Django updates the registered StorageNode
 ```
 
 ---
 
-## Git Milestones
+# Database Models
 
-```text
-v0.1.0  Project foundation
-v0.2.0  Authentication system
-v0.3.0  Provider node registration
-v0.4.0  Node Agent heartbeat and monitoring
-v0.5.0  IPFS node status monitoring
-v0.6.0  IPFS file upload and download
-```
+The main models are:
+
+### `UserProfile`
+
+Stores:
+
+- role
+- consumer storage usage
+- provider storage contribution
+- reputation
+- provider verification state
+
+### `StorageNode`
+
+Stores:
+
+- owner
+- display name
+- node UUID
+- node token
+- allocated storage
+- storage used
+- total/available storage
+- heartbeat timestamp
+- online status
+- operating system
+- Node Agent version
+- Agent API URL
+- IPFS status
+- IPFS peer ID
+- IPFS version
+- node status
+
+### `UploadedFile`
+
+Stores file metadata such as:
+
+- owner
+- provider node
+- original filename
+- CID
+- file size
+- content type
+- upload timestamp
 
 ---
 
-## Development Notes
+# Security Notes
 
-### Do Not Commit
+The current project is a development/MVP implementation.
 
-The following should not be committed:
+Do not commit:
 
 ```text
 .env
 venv/
 __pycache__/
+*.pyc
+node_identity.json
 db.sqlite3
 media/
-ipfs_test.txt
+```
+
+The Node Token should be treated as a private credential.
+
+For production deployment, the following should be added before exposing provider nodes to the public internet:
+
+- HTTPS/TLS
+- secure secret management
+- authenticated Node Agent requests
+- token rotation/revocation
+- PostgreSQL or another production database
+- stronger API validation and rate limiting
+- background job processing
+- proper public/reachable provider networking
+
+---
+
+# Current Limitations
+
+The current version is focused on the **core provider-node storage workflow**.
+
+Not yet implemented as part of the current core version:
+
+- Application-level file chunking
+- Multi-node file replication
+- AES-256-GCM client-side encryption
+- Automated failed-node recovery and re-replication
+- Full production deployment to Render with publicly reachable provider nodes
+- Complete Flutter client integration
+- Background worker for automatic offline-node cleanup
+
+These are planned extensions rather than requirements for the current basic PC-to-PC implementation.
+
+---
+
+# Development Workflow
+
+Recommended development cycle:
+
+```text
+Implement feature
+      ↓
+Test on one computer
+      ↓
+Fix errors
+      ↓
+Test Node Agent + Kubo locally
+      ↓
+Test Django integration
+      ↓
+Test PC-to-PC LAN communication
+      ↓
+Commit working version
+```
+
+For Git development:
+
+```powershell
+git status
+git add .
+git commit -m "Update decentralized storage system"
+git push origin <your-branch>
+```
+
+On another computer:
+
+```powershell
+git fetch origin
+git checkout <your-branch>
+git pull origin <your-branch>
 ```
 
 ---
 
-## Current Manual Step
+# Project Status
 
-Currently, the provider must manually copy the `NODE_UUID` from the Provider Dashboard into:
+### Current status: Core PC-to-PC storage workflow implemented
 
-```text
-node_agent/.env
-```
+Working areas include:
 
-This is temporary for development.
+- Django backend
+- User authentication
+- Consumer/provider roles
+- Provider registration
+- Storage node management
+- Node heartbeat
+- Automatic Node Agent LAN IP detection
+- Automatic persistent Node UUID generation
+- Node Token based pairing
+- Provider selection
+- Node Agent upload/download bridge
+- Kubo/IPFS integration
+- CID-based file metadata
+- Consumer file operations
+- Provider storage accounting
+- REST API support
+- Network statistics
 
-Future improvement:
-
-```text
-Download Agent Config
-or
-Pairing Code Based Agent Setup
-```
+The next development stages are focused on stronger security, deletion/IPFS lifecycle management, replication, chunking, encryption, recovery, frontend integration, testing, and production deployment.
 
 ---
 
-## Future Work
+## License
 
-- REST API for frontend developers
-- Delete file record
-- IPFS pin/unpin support
-- Provider selection algorithm
-- Multi-provider replication
-- Node reputation system
-- Automatic Node Agent configuration
-- Background offline node checker
-- Mobile/web frontend
-- Production deployment
+Add your project license here before public release.
