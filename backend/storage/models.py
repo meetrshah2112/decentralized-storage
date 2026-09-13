@@ -238,6 +238,25 @@ class UploadedFile(models.Model):
         blank=True,
     )
 
+    encrypted_key = models.BinaryField(
+        null=True,
+        blank=True,
+    )
+
+    key_nonce = models.BinaryField(
+        null=True,
+        blank=True,
+    )
+
+    file_nonce = models.BinaryField(
+        null=True,
+        blank=True,
+    )
+
+    is_encrypted = models.BooleanField(
+        default=False,
+    )
+
     uploaded_at = models.DateTimeField(
         auto_now_add=True,
     )
